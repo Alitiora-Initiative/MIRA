@@ -14,6 +14,20 @@ It features:
 
 ---
 
+## Live Production Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Network** | Solana Mainnet |
+| **RPC Endpoint** | `https://api.mainnet-beta.solana.com` |
+| **Core Vault Pubkey** | `EDZjEbRAtqyC8z6ta6PYHX161Xynt13tWpd7orKERkbz` |
+| **Jupiter API** | Aggregator V6 (`quote-api.jup.ag/v6`) |
+| **Dashboard** | Deployed on Vercel (see below) |
+
+> **Security:** Only the public key is stored in this repository. The private key must remain in a local `.env` file and is never committed.
+
+---
+
 ## Architecture Overview
 
 ```
@@ -70,20 +84,24 @@ When the parent wallet balance reaches **$20.00 USD**:
 
 ---
 
-## Quick Start
+## Quick Start (Local)
 
 ### Prerequisites
 - Python 3.10+
-- Node.js 18+ (for dashboard)
-- Solana Mainnet RPC endpoint (Helius, QuickNode, or public)
-- Funded Solana keypair (never commit private keys)
+- Node.js 18+ (for local dashboard)
+- Funded Solana keypair matching the core vault pubkey above
 
 ### 1. Clone & Environment
 ```bash
 git clone https://github.com/Alitiora-Initiative/MIRA.git
 cd MIRA
 cp .env.example .env
-# Edit .env with your RPC URL and private key
+```
+
+Edit `.env`:
+```env
+SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
+PRIVATE_KEY=<your base58 private key — never commit this>
 ```
 
 ### 2. Python Engine
@@ -92,12 +110,25 @@ pip install -r requirements.txt
 python mira_jup_router.py
 ```
 
-### 3. React Dashboard
+### 3. React Dashboard (local)
 ```bash
 cd src
 npm install
 npm run dev
 ```
+
+---
+
+## Vercel Deployment (Dashboard)
+
+The telemetry dashboard lives in the `src/` directory and is configured for Vercel (Vite + React).
+
+- **Root Directory:** `src`
+- **Framework:** Vite
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+
+Every push to `main` triggers a new deployment when the project is linked.
 
 ---
 
@@ -108,6 +139,7 @@ npm run dev
 - Private keys must never be committed to the repository.
 - The $0.60 USD floor and mitosis logic are hard-coded safety guards.
 - Priority fees are set to 50,000 lamports by default; adjust according to network conditions.
+- The public RPC (`api.mainnet-beta.solana.com`) is rate-limited; for production reliability use a dedicated provider (Helius, QuickNode, etc.).
 
 ---
 
