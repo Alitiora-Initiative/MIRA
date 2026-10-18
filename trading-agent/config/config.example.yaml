@@ -110,3 +110,28 @@ account_mode:
     require_hardware_wallet: false
     max_position_size_usd: 1000
     daily_loss_limit_usd: 100
+
+# Data Pipeline Configuration
+data_pipeline:
+  go_indexer:
+    enabled: true
+    solana_rpc_endpoints:
+      - "wss://api.devnet.solana.com"
+      - "wss://solana-api.projectserum.com"
+    evm_rpc_endpoints:
+      - "wss://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+    kafka_brokers:
+      - "localhost:9092"
+    consumer_group: "consumers"
+
+  hfe_engine:
+    enabled: true
+    ipc_method: "shared_memory"
+    exchanges:
+      binance:
+        api_key: ""
+        secret: ""
+        testnet: true
+      bybit:
+        api_key: ""
+        secret: ""

@@ -111,6 +111,12 @@ class AccountModeConfig:
 
 
 @dataclass
+class DataPipelineConfig:
+    go_indexer: Dict[str, Any] = field(default_factory=dict)
+    hfe_engine: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class Config:
     general: GeneralConfig = field(default_factory=GeneralConfig)
     solana: SolanaConfig = field(default_factory=SolanaConfig)
@@ -124,3 +130,4 @@ class Config:
     wallet_service: WalletServiceConfig = field(default_factory=WalletServiceConfig)
     mev_engine: MevEngineConfig = field(default_factory=MevEngineConfig)
     account_mode: AccountModeConfig = field(default_factory=AccountModeConfig)
+    data_pipeline: DataPipelineConfig = field(default_factory=DataPipelineConfig)
