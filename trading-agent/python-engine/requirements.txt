@@ -18,3 +18,17 @@ loguru>=0.7.0
 
 # Docker
 docker>=7.0.0
+
+# AI Toolkit
+anthropic>=0.18.0
+openai>=1.0.0
+
+# TradingView & Webhooks
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.5.0
+httpx>=0.25.0
+
+# Exchange APIs
+alpaca-trade-api>=3.0.0
+python-binance>=1.0.0

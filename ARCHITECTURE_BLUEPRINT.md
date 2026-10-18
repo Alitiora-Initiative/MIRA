@@ -1452,3 +1452,348 @@ This architectural blueprint provides a comprehensive roadmap for expanding the 
 The wallet-centric architecture ensures security by eliminating plain-text private keys, while the IPC layer enables seamless communication between diverse language stacks. The modular design allows for incremental deployment and testing of each phase before proceeding to the next.
 
 By following this blueprint, the MIRA trading agent will be positioned to trade memecoins, tokenized stocks, and perpetual contracts across multiple blockchains and CEX platforms with enterprise-grade reliability and security.
+
+---
+
+## AI Trading Toolkit Integration
+
+### Overview
+
+MIRA integrates with modern AI-powered trading tools to enhance strategy development, backtesting, and execution capabilities. This integration enables autonomous strategy development and optimization using LLM agents and multi-agent systems.
+
+### AI Brain (LLM / Agent Layer)
+
+**Claude / ChatGPT Integration** (`python-engine/ai/`)
+```python
+# Responsibilities:
+# - Write and debug strategy logic
+# - Analyze market sentiment from social media
+# - Generate Pine Script indicators
+# - Optimize trading parameters
+# - Autonomous research and strategy development
+
+# Implementation:
+# - Anthropic Claude API for advanced reasoning
+# - OpenAI GPT-4 for strategy generation
+# - MCP (Multi-Connection Proxy) servers for tool access
+# - AutoGPT-style agent orchestration
+```
+
+**Hermes Multi-Agent System** (`python-engine/ai/hermes/`)
+```python
+# Specialized Agents:
+# - Research Agent: Market research, trend analysis
+# - Builder Agent: Strategy implementation, code generation
+# - Optimizer Agent: Parameter tuning, backtesting
+# - Risk Agent: Risk assessment, position sizing
+
+# Coordination:
+# - Agent communication via shared memory
+# - Task queue for distributed agent execution
+# - Result aggregation and consensus
+```
+
+### Charting & Data Platform Integration
+
+**TradingView Integration** (`python-engine/tradingview/`)
+```python
+# Responsibilities:
+# - Receive webhook alerts from TradingView
+# - Parse indicator signals (MACRO_BULLISH, MACRO_BEARISH, VOLATILITY_SPIKE)
+# - Forward signals to Python core engine
+# - Support for Pine Script indicators
+
+# API Endpoints:
+# POST /api/v1/webhook/tradingview
+# GET /api/v1/tradingview/status
+
+# Pine Script Integration:
+# - Macro trend detector (EMA crossovers)
+# - Volatility spike detector (ATR-based)
+# - Custom indicator generation via LLM
+```
+
+**Configuration** (add to `config/config.yaml`)
+```yaml
+tradingview:
+  enabled: true
+  webhook_url: http://localhost:8084/api/v1/webhook/tradingview
+  api_key: ""
+  alert_types:
+    - MACRO_BULLISH
+    - MACRO_BEARISH
+    - VOLATILITY_SPIKE
+    - CUSTOM
+```
+
+### Backtesting & Strategy Builders
+
+**TradingKit MCP Integration** (`python-engine/backtesting/tradingkit/`)
+```python
+# Responsibilities:
+# - MCP server for TradingKit.com backtesting
+# - Run backtests directly from Claude/ChatGPT
+# - Real-time strategy optimization
+# - Historical data access
+
+# MCP Tools:
+# - run_backtest(strategy, timeframe, symbol)
+# - get_historical_data(symbol, period)
+# - optimize_parameters(strategy, ranges)
+# - calculate_metrics(backtest_results)
+```
+
+**AlgoBuilder Integration** (`python-engine/backtesting/algobuilder/`)
+```python
+# Responsibilities:
+# - Visual strategy creation via plain English
+# - Cloud optimization and parameter tuning
+# - Export strategies to MIRA format
+# - Multi-exchange backtesting
+
+# Features:
+# - Natural language to strategy code
+# - Automated parameter optimization
+# - Monte Carlo simulation
+# - Walk-forward analysis
+```
+
+**3Commas QuantPilot** (`python-engine/backtesting/3commas/`)
+```python
+# Responsibilities:
+# - Integration with 3Commas smart trading
+# - DCA bot strategy backtesting
+# - Grid trading optimization
+# - Risk management configuration
+
+# API Integration:
+# - 3Commas API for bot management
+# - Signal copying to 3Commas bots
+# - Portfolio synchronization
+```
+
+### Execution & Bridge Tools
+
+**Alpaca API Integration** (`python-engine/exchanges/alpaca/`)
+```python
+# Responsibilities:
+# - Stock trading with paper trading support
+# - Real-time market data streaming
+# - Order management and execution
+# - MCP support for LLM integration
+
+# Features:
+# - Paper trading for testing
+# - Live trading with risk controls
+# - Historical data access
+# - WebSocket streaming
+```
+
+**Binance Integration** (`python-engine/exchanges/binance/`)
+```python
+# Responsibilities:
+# - Crypto spot and futures trading
+# - Multi-exchange automation
+# - Order book depth monitoring
+# - API key management
+
+# Features:
+# - Spot trading
+# - Perpetual futures
+# - WebSocket market data
+# - Rate limiting
+```
+
+**3Commas Bridge** (`python-engine/exchanges/3commas/`)
+```python
+# Responsibilities:
+# - Multi-exchange automation via 3Commas
+# - Smart trading bot integration
+# - DCA and grid trading
+# - Signal routing from TradingView
+
+# Features:
+# - DCA bot management
+# - Grid trading
+# - Signal subscription
+# - Safety orders
+```
+
+**Trigger.trade Integration** (`python-engine/exchanges/trigger/`)
+```python
+# Responsibilities:
+# - Route TradingView alerts to Telegram
+# - Forward alerts to supported brokers
+# - Free webhook-to-broker routing
+# - Alert management and filtering
+
+# Configuration:
+# - Webhook URL setup
+# - Broker connections
+# - Alert templates
+# - Telegram notifications
+```
+
+### Architecture Integration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    AI Brain Layer (LLM Agents)               │
+│  Claude / ChatGPT / Hermes Multi-Agent System               │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ MCP / API
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Strategy Development & Backtesting            │
+│  TradingKit / AlgoBuilder / 3Commas QuantPilot              │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ Optimized Strategies
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Charting & Signals Layer                   │
+│              TradingView (Pine Script Webhooks)              │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ Alert Webhooks
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Python Core Orchestrator                      │
+│        (AI Models, LLM Agents, General Logic)                │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ Execution Commands
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Execution & Bridge Layer                    │
+│     Alpaca / Binance / 3Commas / Trigger.trade              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Configuration Updates
+
+Add to `config/config.yaml`:
+```yaml
+ai_toolkit:
+  claude:
+    enabled: true
+    api_key: ""
+    model: "claude-3-opus-20240229"
+  chatgpt:
+    enabled: false
+    api_key: ""
+    model: "gpt-4-turbo-preview"
+  hermes_agents:
+    enabled: true
+    max_concurrent_agents: 5
+    research_agent:
+      enabled: true
+      data_sources: ["twitter", "reddit", "news"]
+    builder_agent:
+      enabled: true
+      target_languages: ["python", "julia", "r"]
+    optimizer_agent:
+      enabled: true
+      optimization_method: "bayesian"
+    risk_agent:
+      enabled: true
+      max_position_size: 0.1
+
+  tradingkit:
+    enabled: true
+    mcp_server_port: 8086
+    backtest_limit: 1000
+
+  algobuilder:
+    enabled: false
+    api_key: ""
+    auto_optimize: true
+
+  3commas:
+    enabled: true
+    api_key: ""
+    api_secret: ""
+    smart_trading: true
+
+  tradingview:
+    enabled: true
+    webhook_url: http://localhost:8084/api/v1/webhook/tradingview
+    essential_plan: true
+
+  exchanges:
+    alpaca:
+      enabled: true
+      api_key: ""
+      api_secret: ""
+      paper_trading: true
+    binance:
+      enabled: true
+      api_key: ""
+      api_secret: ""
+      testnet: false
+    trigger_trade:
+      enabled: true
+      webhook_url: ""
+      telegram_bot_token: ""
+```
+
+### Deliverables Checklist (AI Toolkit Integration)
+- [ ] Claude API integration for strategy development
+- [ ] Hermes multi-agent system implementation
+- [ ] TradingKit MCP server setup
+- [ ] AlgoBuilder integration for visual strategy creation
+- [ ] 3Commas QuantPilot integration
+- [ ] TradingView webhook receiver with Pine Script support
+- [ ] Alpaca API integration with paper trading
+- [ ] Binance API integration for crypto trading
+- [ ] 3Commas bridge for multi-exchange automation
+- [ ] Trigger.trade integration for Telegram alerts
+- [ ] Configuration updates for all integrations
+- [ ] Documentation for AI toolkit usage
+- [ ] Testing of all external integrations
+
+### Security Considerations
+
+- **API Key Management**: All API keys stored in encrypted vault
+- **Rate Limiting**: Implement rate limiting for all external APIs
+- **Webhook Authentication**: Verify webhook signatures for TradingView
+- **Paper Trading**: Always test strategies in paper trading mode first
+- **Audit Logging**: Log all AI agent decisions and external API calls
+- **Fail-Safe Mechanisms**: Circuit breakers for automated trading
+
+### Production Deployment
+
+The AI toolkit integration requires:
+1. Valid API keys for all external services
+2. Webhook endpoints publicly accessible (or via tunnel)
+3. Database for storing AI agent decisions and backtest results
+4. Monitoring for API usage and rate limits
+5. Backup strategies for external service outages
+
+---
+
+## Post-Implementation: Production Readiness Checklist
+
+### Before Live Trading
+- [ ] All external API keys configured and tested
+- [ ] Paper trading tested for minimum 30 days
+- [ ] Risk management rules validated
+- [ ] Emergency halt mechanism tested
+- [ ] Monitoring and alerting configured
+- [ ] Backup and recovery procedures documented
+- [ ] Legal and regulatory compliance verified
+- [ ] Insurance and liability coverage arranged
+
+### Continuous Monitoring
+- [ ] Real-time P&L tracking
+- [ ] System health monitoring
+- [ ] API rate limit monitoring
+- [ ] Error rate tracking
+- [ ] Performance metrics logging
+- [ ] Security incident monitoring
+- [ ] AI agent decision auditing
+
+### Ongoing Maintenance
+- [ ] Weekly strategy performance review
+- [ ] Monthly AI agent retraining
+- [ ] Quarterly security audits
+- [ ] Annual architecture review
+- [ ] Regular backup testing
+- [ ] Documentation updates

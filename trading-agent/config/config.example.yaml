@@ -3,7 +3,7 @@
 # General Settings
 general:
   log_level: INFO
-  environment: devnet  # Options: devnet, mainnet
+  environment: mainnet  # Options: devnet, mainnet
   timezone: UTC
 
 # Solana Configuration
@@ -99,15 +99,15 @@ mev_engine:
 
 # Account Mode Configuration
 account_mode:
-  mode: demo  # Options: demo, live
+  mode: live  # Options: demo, live
   demo:
-    paper_trading: true
+    paper_trading: false
     initial_balance_usd: 10000
-    simulate_slippage: true
-    simulate_execution: true
+    simulate_slippage: false
+    simulate_execution: false
   live:
     require_biometric: true
-    require_hardware_wallet: false
+    require_hardware_wallet: true
     max_position_size_usd: 1000
     daily_loss_limit_usd: 100
 
@@ -116,7 +116,7 @@ data_pipeline:
   go_indexer:
     enabled: true
     solana_rpc_endpoints:
-      - "wss://api.devnet.solana.com"
+      - "wss://api.mainnet-beta.solana.com"
       - "wss://solana-api.projectserum.com"
     evm_rpc_endpoints:
       - "wss://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
@@ -218,3 +218,66 @@ external_bridges:
     bridge_enabled: false
     server_url: "http://localhost:8084/api/v1/webhook/metatrader"
     magic_number: 12345
+
+# AI Toolkit Integration
+ai_toolkit:
+  claude:
+    enabled: true
+    api_key: ""
+    model: "claude-3-opus-20240229"
+  chatgpt:
+    enabled: false
+    api_key: ""
+    model: "gpt-4-turbo-preview"
+  hermes_agents:
+    enabled: true
+    max_concurrent_agents: 5
+    research_agent:
+      enabled: true
+      data_sources: ["twitter", "reddit", "news"]
+    builder_agent:
+      enabled: true
+      target_languages: ["python", "julia", "r"]
+    optimizer_agent:
+      enabled: true
+      optimization_method: "bayesian"
+    risk_agent:
+      enabled: true
+      max_position_size: 0.1
+
+  tradingkit:
+    enabled: true
+    mcp_server_port: 8086
+    backtest_limit: 1000
+
+  algobuilder:
+    enabled: false
+    api_key: ""
+    auto_optimize: true
+
+  3commas:
+    enabled: true
+    api_key: ""
+    api_secret: ""
+    smart_trading: true
+
+  tradingview:
+    enabled: true
+    webhook_url: http://localhost:8084/api/v1/webhook/tradingview
+    essential_plan: true
+
+  exchanges:
+    alpaca:
+      enabled: true
+      api_key: ""
+      api_secret: ""
+      paper_trading: true
+    binance:
+      enabled: true
+      api_key: ""
+      api_secret: ""
+      testnet: false
+    trigger_trade:
+      enabled: true
+      webhook_url: ""
+      telegram_bot_token: ""
