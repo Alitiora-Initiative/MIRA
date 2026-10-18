@@ -13,6 +13,7 @@ from risk.risk_manager import RiskManager
 from scaling.recursive_scaling import RecursiveScaling
 from scaling.subagent_genesis import SubagentGenesis
 from database.db_manager import DatabaseManager
+from account.account_manager import AccountManager
 
 
 class TradingEngine:
@@ -29,6 +30,7 @@ class TradingEngine:
         self.recursive_scaling = RecursiveScaling(config)
         self.subagent_genesis = SubagentGenesis(config)
         self.db_manager = DatabaseManager(config)
+        self.account_manager = AccountManager(config)
 
         logger.info("MIRA Trading Engine initialized")
 

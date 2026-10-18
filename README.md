@@ -188,6 +188,32 @@ MIRA uses a multi-language microservices architecture, leveraging each language 
 - MetaTrader bridge for Forex/CFD
 - External signal ingestion
 
+### ✅ Demo/Live Account Modes (COMPLETE)
+
+**Components Implemented:**
+
+1. **Account Manager** (`trading-agent/python-engine/account/`)
+   - Demo mode with paper trading simulation
+   - Live mode with validation and safety checks
+   - Position tracking and P&L calculation
+   - Trade history management
+   - Balance management
+
+2. **Configuration Integration**
+   - Demo mode: paper trading with simulated balances
+   - Live mode: real trading with biometric authentication
+   - Position size limits
+   - Daily loss limits
+   - Account reset functionality
+
+**Features:**
+- Demo mode for testing strategies (no real funds)
+- Live mode for production trading
+- Paper trading simulation
+- Real-time P&L tracking
+- Trade history and analytics
+- Safety checks for live trading
+
 ### 📋 Phase 3: Enhanced Analytics Layer (PENDING)
 
 ### 📋 Phase 4: Enterprise Backtesting (PENDING)
