@@ -1,0 +1,220 @@
+# MIRA Trading Agent Configuration
+
+# General Settings
+general:
+  log_level: INFO
+  environment: devnet  # Options: devnet, mainnet
+  timezone: UTC
+
+# Solana Configuration
+solana:
+  rpc_endpoint: YOUR_HELIUS_RPC_ENDPOINT
+  commitment: confirmed
+  jito_endpoint: YOUR_JITO_BLOCK_ENGINE_ENDPOINT
+  jito_tip_lamports: 1000
+  dexscreener_api_key: YOUR_DEXSCREENER_API_KEY
+  birdeye_api_key: YOUR_BIRDEYE_API_KEY
+
+# Trading Parameters
+trading:
+  max_position_size: 0.1
+  max_daily_loss: 0.05
+  max_open_positions: 5
+
+  sol:
+    min_trade: 0.001
+    max_trade: 100.0
+    min_deposit: 0.60
+
+  assets:
+    memecoins: true
+    wrapped_lp_tokens: true
+    tokenized_stocks: true
+
+# Φ Matrix Asset Rating System
+phi_matrix:
+  liquidity_density_weight: 0.50
+  holder_concentration_weight: 0.30
+  volumetric_velocity_weight: 0.20
+  minimum_phi_score: 85.0
+  tvl_baseline_usd: 10000
+
+# Risk Management
+risk_management:
+  position_sizing_method: kelly_criterion
+  max_drawdown: 0.20
+  leverage: 1.0
+  diversification_threshold: 0.3
+
+  take_profit_floor: 0.10
+  take_profit_cap: 10.0
+  stop_loss_floor: -0.10
+  stop_loss_ceiling: -0.40
+
+# MPC Configuration
+mpc:
+  threshold: 2
+  total_shares: 3
+  local_share_path: /path/to/local/share
+  cloud_endpoint: YOUR_MPC_CLOUD_ENDPOINT
+  biometric_required: true
+
+# Recursive Scaling
+scaling:
+  milestone_target_sol: 10
+  subagent_genesis_profit_usd: 20.0
+  subagent_count: 10
+  subagent_funding_usd: 1.0
+  perpetual_scaling_threshold_usd: 200.0
+  perpetual_execution_schedule:
+    - "00:00"
+    - "12:00"
+
+# Subagent Docker Configuration
+subagent:
+  base_image: alpine
+  memory_limit_mb: 128
+  cpu_limit: 0.25
+
+# Database
+database:
+  type: sqlite
+  connection_string: sqlite:///trading_data.db
+
+# Wallet Service Configuration
+wallet_service:
+  grpc_endpoint: localhost:50051
+  ws_endpoint: ws://localhost:8080
+  biometric_timeout_seconds: 300
+  hardware_wallet_required: false
+
+# MEV Engine Configuration
+mev_engine:
+  enabled: true
+  grpc_endpoint: localhost:50052
+  private_mempool: jito
+  max_slippage_bps: 300
+  sandwich_detection: true
+  circuit_breaker_enabled: true
+
+# Account Mode Configuration
+account_mode:
+  mode: demo  # Options: demo, live
+  demo:
+    paper_trading: true
+    initial_balance_usd: 10000
+    simulate_slippage: true
+    simulate_execution: true
+  live:
+    require_biometric: true
+    require_hardware_wallet: false
+    max_position_size_usd: 1000
+    daily_loss_limit_usd: 100
+
+# Data Pipeline Configuration
+data_pipeline:
+  go_indexer:
+    enabled: true
+    solana_rpc_endpoints:
+      - "wss://api.devnet.solana.com"
+      - "wss://solana-api.projectserum.com"
+    evm_rpc_endpoints:
+      - "wss://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
+    kafka_brokers:
+      - "localhost:9092"
+    consumer_group: "consumers"
+
+  hfe_engine:
+    enabled: true
+    ipc_method: "shared_memory"
+    exchanges:
+      binance:
+        api_key: ""
+        secret: ""
+        testnet: true
+      bybit:
+        api_key: ""
+        secret: ""
+
+# Analytics Configuration
+analytics:
+  julia:
+    enabled: true
+    portfolio_endpoint: http://localhost:8081
+    risk_endpoint: http://localhost:8082
+    portfolio_optimization:
+      solver: "HiGHS"
+      max_positions: 20
+      rebalance_threshold: 0.05
+    risk_simulation:
+      monte_carlo_runs: 10000
+      time_horizon_days: 30
+
+  r:
+    enabled: true
+    statistical_endpoint: http://localhost:8083
+    pool_endpoint: http://localhost:8084
+    volatility:
+      model: "GARCH(1,1)"
+      forecast_horizon: 7
+    liquidity:
+      pool_depth_threshold: 100000
+      impermanent_loss_threshold: 0.02
+
+# Backtesting Configuration
+backtesting:
+  java:
+    enabled: true
+    api_endpoint: http://localhost:8085
+    data_source: "sql"
+    replay_speed: "realtime"
+    slippage_model: "linear"
+
+  broker:
+    ib_gateway:
+      enabled: false
+      host: "127.0.0.1"
+      port: 7497
+      client_id: 1
+      account_id: ""
+
+    strategies:
+      phi_matrix_filter:
+        enabled: true
+        min_phi_score: 85.0
+      momentum:
+        enabled: false
+        lookback_period: 20
+
+# External Bridges Configuration
+external_bridges:
+  database:
+    type: postgresql
+    connection_string: postgresql://user:pass@localhost/trading_data
+    connection_pool_size: 10
+
+  webhooks:
+    enabled: true
+    receiver_port: 8084
+    allowed_sources:
+      - "tradingview"
+      - "metatrader"
+    authentication:
+      type: "api_key"
+      keys:
+        tradingview: "tv_secret_key"
+        metatrader: "mt_secret_key"
+
+  pine_script:
+    indicators:
+      macro_trend:
+        enabled: true
+        webhook_url: "http://localhost:8084/api/v1/webhook/tradingview"
+    volatility_spike:
+      enabled: true
+      webhook_url: "http://localhost:8084/api/v1/webhook/tradingview"
+
+  metatrader:
+    bridge_enabled: false
+    server_url: "http://localhost:8084/api/v1/webhook/metatrader"
+    magic_number: 12345

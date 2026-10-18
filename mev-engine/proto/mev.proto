@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package mev;
+
+service MEVService {
+  rpc CheckSafety(SafetyCheckRequest) returns (SafetyCheckResponse);
+  rpc OptimizeSlippage(SlippageRequest) returns (SlippageResponse);
+  rpc BundleTransactions(BundleRequest) returns (BundleResponse);
+}
+
+message SafetyCheckRequest {
+  string transaction_data = 1;
+  string pool_address = 2;
+  int64 amount = 3;
+  string token_in = 4;
+  string token_out = 5;
+}
+
+message SafetyCheckResponse {
+  bool is_safe = 1;
+  repeated string warnings = 2;
+  string risk_level = 3;  // 'low', 'medium', 'high'
+  double risk_score = 4;
+}
+
+message SlippageRequest {
+  string pool_address = 1;
+  int64 amount = 2;
+  string token_in = 3;
+  string token_out = 4;
+  int32 max_slippage_bps = 5;
+}
+
+message SlippageResponse {
+  int32 recommended_slippage_bps = 1;
+  double expected_price_impact = 2;
+  double estimated_gas_cost = 3;
+  bool is_acceptable = 4;
+}
+
+message BundleRequest {
+  repeated string transactions = 1;
+  int64 tip_lamports = 2;
+}
+
+message BundleResponse {
+  bool success = 1;
+  string bundle_id = 2;
+  string error = 3;
+}

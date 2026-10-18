@@ -1,0 +1,23 @@
+//@version=5
+indicator("MIRA Macro Trend Detector", overlay=true)
+
+// Parameters
+ema_fast = input.int(9, "Fast EMA")
+ema_slow = input.int(21, "Slow EMA")
+webhook_url = input.string("http://localhost:8084/api/v1/webhook/tradingview")
+
+// Calculate EMAs
+fast_ema = ta.ema(close, ema_fast)
+slow_ema = ta.ema(close, ema_slow)
+
+// Detect crossovers
+bullish_cross = ta.crossover(fast_ema, slow_ema)
+bearish_cross = ta.crossunder(fast_ema, slow_ema)
+
+// Plot
+plot(fast_ema, color=color.blue, title="Fast EMA")
+plot(slow_ema, color=color.red, title="Slow EMA")
+
+// Webhook alerts
+alertcondition(bullish_cross, title="Bullish Crossover", message="MACRO_BULLISH")
+alertcondition(bearish_cross, title="Bearish Crossover", message="MACRO_BEARISH")

@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package wallet;
+
+service WalletService {
+  rpc GetWalletState(WalletRequest) returns (WalletState);
+  rpc SignTransaction(SignRequest) returns (SignResponse);
+  rpc GetBalance(BalanceRequest) returns (BalanceResponse);
+  rpc BroadcastTransaction(TxRequest) returns (TxResponse);
+  rpc UnlockWallet(UnlockRequest) returns (UnlockResponse);
+  rpc LockWallet(LockRequest) returns (LockResponse);
+}
+
+message WalletRequest {
+  string wallet_address = 1;
+}
+
+message WalletState {
+  bool is_locked = 1;
+  string wallet_address = 2;
+  repeated string supported_chains = 3;
+  int64 last_unlocked_timestamp = 4;
+}
+
+message SignRequest {
+  string wallet_address = 1;
+  bytes transaction_bytes = 2;
+  string chain = 3;  // 'solana' or 'evm'
+  string biometric_token = 4;
+}
+
+message SignResponse {
+  bool success = 1;
+  bytes signed_transaction = 2;
+  string signature = 3;
+  string error = 4;
+}
+
+message BalanceRequest {
+  string wallet_address = 1;
+  string asset_symbol = 2;
+}
+
+message BalanceResponse {
+  bool success = 1;
+  string balance = 2;
+  string balance_usd = 3;
+  string error = 4;
+}
+
+message TxRequest {
+  string wallet_address = 1;
+  bytes signed_transaction = 2;
+  string chain = 3;
+}
+
+message TxResponse {
+  bool success = 1;
+  string transaction_hash = 2;
+  string error = 3;
+}
+
+message UnlockRequest {
+  string wallet_address = 1;
+  string password = 2;
+  string biometric_token = 3;
+}
+
+message UnlockResponse {
+  bool success = 1;
+  string session_token = 2;
+  string error = 3;
+}
+
+message LockRequest {
+  string wallet_address = 1;
+  string session_token = 2;
+}
+
+message LockResponse {
+  bool success = 1;
+  string error = 2;
+}

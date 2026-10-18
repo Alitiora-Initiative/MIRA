@@ -1,0 +1,23 @@
+[package]
+name = "mira-mev-engine"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tonic = "0.10"
+prost = "0.12"
+solana-sdk = "1.17"
+solana-client = "1.17"
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+dashmap = "5.5"
+chrono = "0.4"
+uuid = { version = "1.6", features = ["v4"] }
+
+[build-dependencies]
+tonic-build = "0.10"
