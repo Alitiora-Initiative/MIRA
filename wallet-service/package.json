@@ -1,0 +1,39 @@
+{
+  "name": "mira-wallet-service",
+  "version": "1.0.0",
+  "description": "Wallet state management and signing service for MIRA trading agent",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "proto": "protoc --ts_out=src --proto_path=proto proto/wallet.proto"
+  },
+  "keywords": [
+    "wallet",
+    "solana",
+    "evm",
+    "trading"
+  ],
+  "author": "MIRA",
+  "license": "MIT",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.10",
+    "@solana/web3.js": "^1.87.0",
+    "ethers": "^6.9.0",
+    "ws": "^8.14.0",
+    "express": "^4.18.0",
+    "dotenv": "^16.3.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/express": "^4.17.0",
+    "@types/ws": "^8.5.0",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0",
+    "protoc-gen-ts": "^0.8.0"
+  }
+}
