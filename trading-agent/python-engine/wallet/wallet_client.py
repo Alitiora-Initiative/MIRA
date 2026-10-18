@@ -9,7 +9,6 @@ from loguru import logger
 import os
 
 # Import generated protobuf classes
-# These will be generated from wallet.proto
 try:
     from wallet_pb2 import (
         WalletRequest,
@@ -30,7 +29,9 @@ except ImportError:
     logger.warning("Protobuf files not generated yet. Run: cd wallet-service && npm run proto")
     # Create stub classes for development
     class WalletRequest:
-        pass
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
     class WalletState:
         pass
     class SignRequest:

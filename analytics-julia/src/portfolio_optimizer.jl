@@ -194,10 +194,35 @@ function start_server(port::Int=8081)
 
     HTTP.serve() do request::HTTP.Request
         path = request.target
+        body = String(request.body)
+
         if request.method == "POST" && path == "/optimize"
-            return handle_optimize(request)
+            parsed = parse_request(body)
+            if parsed === nothing
+                return HTTP.Response(400, "Invalid request")
+            end
+            response = optimize_portfolio(parsed)
+            return HTTP.Response(200, JSON3.write(Dict(
+                "success" => response.success,
+                "optimal_weights" => response.optimal_weights,
+                "expected_return" => response.expected_return,
+                "expected_risk" => response.expected_risk,
+                "sharpe_ratio" => response.sharpe_ratio,
+                "error" => response.error
+            )))
         elseif request.method == "POST" && path == "/optimize/cvar"
-            return handle_optimize_cvar(request)
+            parsed = parse_request(body)
+            if parsed === nothing
+                return HTTP.Response(400, "Invalid request")
+            end
+            response = optimize_cvar(parsed)
+            return HTTP.Response(200, JSON3.write(Dict(
+                "success" => response.success,
+                "optimal_weights" => response.optimal_weights,
+                "expected_return" => response.expected_return,
+                "expected_risk" => response.expected_risk,
+                "error" => response.error
+            )))
         else
             return HTTP.Response(404, "Not found")
         end
