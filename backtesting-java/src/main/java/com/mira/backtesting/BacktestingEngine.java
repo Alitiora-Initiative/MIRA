@@ -43,7 +43,9 @@ public class BacktestingEngine {
         Spark.get("/api/v1/strategies", this::listStrategies);
         Spark.get("/api/v1/health", (req, res) -> {
             res.type("application/json");
-            return gson.toJson(Map.of("status", "healthy"));
+            Map<String, String> healthMap = new HashMap<>();
+            healthMap.put("status", "healthy");
+            return gson.toJson(healthMap);
         });
 
         System.out.println("Backtesting Engine started successfully");
@@ -61,46 +63,46 @@ public class BacktestingEngine {
             Strategy strategy = strategies.get(strategyName);
             if (strategy == null) {
                 res.status(400);
-                return gson.toJson(Map.of(
-                    "success", false,
-                    "error", "Strategy not found: " + strategyName
-                ));
+                Map<String, Object> errorMap = new HashMap<>();
+                errorMap.put("success", false);
+                errorMap.put("error", "Strategy not found: " + strategyName);
+                return gson.toJson(errorMap);
             }
 
             // Load data
             var data = dataStore.loadHistoricalData(symbol, timeframe, limit);
             if (data == null || data.isEmpty()) {
                 res.status(400);
-                return gson.toJson(Map.of(
-                    "success", false,
-                    "error", "No data available for symbol: " + symbol
-                ));
+                Map<String, Object> errorMap2 = new HashMap<>();
+                errorMap2.put("success", false);
+                errorMap2.put("error", "No data available for symbol: " + symbol);
+                return gson.toJson(errorMap2);
             }
 
             // Run backtest
             var result = strategy.runBacktest(data);
 
             res.type("application/json");
-            return gson.toJson(Map.of(
-                "success", true,
-                "strategy", strategyName,
-                "symbol", symbol,
-                "timeframe", timeframe,
-                "total_trades", result.getTotalTrades(),
-                "winning_trades", result.getWinningTrades(),
-                "losing_trades", result.getLosingTrades(),
-                "win_rate", result.getWinRate(),
-                "total_return", result.getTotalReturn(),
-                "max_drawdown", result.getMaxDrawdown(),
-                "sharpe_ratio", result.getSharpeRatio(),
-                "profit_factor", result.getProfitFactor()
-            ));
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("success", true);
+            responseMap.put("strategy", strategyName);
+            responseMap.put("symbol", symbol);
+            responseMap.put("timeframe", timeframe);
+            responseMap.put("total_trades", result.getTotalTrades());
+            responseMap.put("winning_trades", result.getWinningTrades());
+            responseMap.put("losing_trades", result.getLosingTrades());
+            responseMap.put("win_rate", result.getWinRate());
+            responseMap.put("total_return", result.getTotalReturn());
+            responseMap.put("max_drawdown", result.getMaxDrawdown());
+            responseMap.put("sharpe_ratio", result.getSharpeRatio());
+            responseMap.put("profit_factor", result.getProfitFactor());
+            return gson.toJson(responseMap);
         } catch (Exception e) {
             res.status(500);
-            return gson.toJson(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+            Map<String, Object> errorMap3 = new HashMap<>();
+            errorMap3.put("success", false);
+            errorMap3.put("error", e.getMessage());
+            return gson.toJson(errorMap3);
         }
     }
 
