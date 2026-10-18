@@ -135,3 +135,28 @@ data_pipeline:
       bybit:
         api_key: ""
         secret: ""
+
+# Analytics Configuration
+analytics:
+  julia:
+    enabled: true
+    portfolio_endpoint: http://localhost:8081
+    risk_endpoint: http://localhost:8082
+    portfolio_optimization:
+      solver: "HiGHS"
+      max_positions: 20
+      rebalance_threshold: 0.05
+    risk_simulation:
+      monte_carlo_runs: 10000
+      time_horizon_days: 30
+
+  r:
+    enabled: true
+    statistical_endpoint: http://localhost:8083
+    pool_endpoint: http://localhost:8084
+    volatility:
+      model: "GARCH(1,1)"
+      forecast_horizon: 7
+    liquidity:
+      pool_depth_threshold: 100000
+      impermanent_loss_threshold: 0.02
