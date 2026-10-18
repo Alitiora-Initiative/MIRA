@@ -123,6 +123,20 @@ class AnalyticsConfig:
 
 
 @dataclass
+class BacktestingConfig:
+    java: Dict[str, Any] = field(default_factory=dict)
+    broker: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class ExternalBridgesConfig:
+    database: Dict[str, Any] = field(default_factory=dict)
+    webhooks: Dict[str, Any] = field(default_factory=dict)
+    pine_script: Dict[str, Any] = field(default_factory=dict)
+    metatrader: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class Config:
     general: GeneralConfig = field(default_factory=GeneralConfig)
     solana: SolanaConfig = field(default_factory=SolanaConfig)
@@ -138,3 +152,5 @@ class Config:
     account_mode: AccountModeConfig = field(default_factory=AccountModeConfig)
     data_pipeline: DataPipelineConfig = field(default_factory=DataPipelineConfig)
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
+    backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
+    external_bridges: ExternalBridgesConfig = field(default_factory=ExternalBridgesConfig)

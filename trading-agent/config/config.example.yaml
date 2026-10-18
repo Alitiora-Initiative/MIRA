@@ -160,3 +160,61 @@ analytics:
     liquidity:
       pool_depth_threshold: 100000
       impermanent_loss_threshold: 0.02
+
+# Backtesting Configuration
+backtesting:
+  java:
+    enabled: true
+    api_endpoint: http://localhost:8085
+    data_source: "sql"
+    replay_speed: "realtime"
+    slippage_model: "linear"
+
+  broker:
+    ib_gateway:
+      enabled: false
+      host: "127.0.0.1"
+      port: 7497
+      client_id: 1
+      account_id: ""
+
+    strategies:
+      phi_matrix_filter:
+        enabled: true
+        min_phi_score: 85.0
+      momentum:
+        enabled: false
+        lookback_period: 20
+
+# External Bridges Configuration
+external_bridges:
+  database:
+    type: postgresql
+    connection_string: postgresql://user:pass@localhost/trading_data
+    connection_pool_size: 10
+
+  webhooks:
+    enabled: true
+    receiver_port: 8084
+    allowed_sources:
+      - "tradingview"
+      - "metatrader"
+    authentication:
+      type: "api_key"
+      keys:
+        tradingview: "tv_secret_key"
+        metatrader: "mt_secret_key"
+
+  pine_script:
+    indicators:
+      macro_trend:
+        enabled: true
+        webhook_url: "http://localhost:8084/api/v1/webhook/tradingview"
+    volatility_spike:
+      enabled: true
+      webhook_url: "http://localhost:8084/api/v1/webhook/tradingview"
+
+  metatrader:
+    bridge_enabled: false
+    server_url: "http://localhost:8084/api/v1/webhook/metatrader"
+    magic_number: 12345
