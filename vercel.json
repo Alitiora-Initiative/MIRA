@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "mira-trading-agent",
   "builds": [
     {
       "src": "dashboard/index.html",

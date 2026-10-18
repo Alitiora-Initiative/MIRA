@@ -76,3 +76,5 @@ Thumbs.db
 *.exe
 *.dll
 *.dylib
+
+.vercel
