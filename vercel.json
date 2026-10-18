@@ -1,16 +1,8 @@
 {
   "version": 2,
   "name": "mira-trading-agent",
-  "builds": [
-    {
-      "src": "dashboard/index.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/dashboard/index.html"
-    }
-  ]
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "installCommand": "npm install"
 }

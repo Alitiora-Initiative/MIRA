@@ -84,8 +84,8 @@ export const useMira = create<MiraState>()(
       position: null,
       lastSig: null,
       clock: 0,
-      arm: (on) =>
-        set((s) => ({
+      arm: (on: boolean) =>
+        set((s: MiraState) => ({
           armed: on,
           ticks: [
             {
@@ -98,8 +98,8 @@ export const useMira = create<MiraState>()(
             ...s.ticks,
           ].slice(0, 18),
         })),
-      setWallet: (pubkey, balanceSol) =>
-        set((s) => ({
+      setWallet: (pubkey: string | null, balanceSol: number | null) =>
+        set((s: MiraState) => ({
           pubkey,
           balanceSol: balanceSol ?? s.balanceSol,
           ticks: [
@@ -113,8 +113,8 @@ export const useMira = create<MiraState>()(
             ...s.ticks,
           ].slice(0, 18),
         })),
-      setSig: (sig) =>
-        set((s) => ({
+      setSig: (sig: string) =>
+        set((s: MiraState) => ({
           lastSig: sig,
           ticks: [
             { t: stamp(), msg: `Phantom signed intent ${sig}. Broadcast stays inside the wallet.`, kind: "exec" as const },
@@ -129,7 +129,7 @@ export const useMira = create<MiraState>()(
         const sigma = 0.12 + (Math.cos(n / 11) + 1) * 0.04;
         const xt = -2.1 + Math.sin(n / 5) * 0.7;
         const outside = Math.abs(xt) > 1.96 * 0.9;
-        const assets = s.assets.map((a, i) => {
+        const assets = s.assets.map((a: AssetRow, i: number) => {
           const wobble = Math.sin(n / 9 + i) * 0.6;
           const phi = Math.max(40, Math.min(98, a.phi + wobble * 0.15));
           const action: AssetRow["action"] =
@@ -150,7 +150,7 @@ export const useMira = create<MiraState>()(
           );
 
         if (!position && outside && n % 4 === 3) {
-          const pick = assets.find((a) => a.phi >= 85 && a.action !== "BLACKLIST");
+          const pick = assets.find((a: AssetRow) => a.phi >= 85 && a.action !== "BLACKLIST");
           if (pick && balanceSol >= 0.0015) {
             position = {
               ticker: pick.ticker,
@@ -210,7 +210,7 @@ export const useMira = create<MiraState>()(
     }),
     {
       name: "mira-session",
-      partialize: (s) => ({
+      partialize: (s: MiraState) => ({
         pubkey: s.pubkey,
         armed: s.armed,
         balanceSol: s.balanceSol,
