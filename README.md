@@ -421,6 +421,30 @@ kubectl apply -f k8s/
 vercel --prod
 ```
 
+The dashboard is deployed at: https://mira-trading-agent.vercel.app
+
+### Quick Start (Demo Mode)
+```bash
+# 1. Start infrastructure
+docker-compose up -d
+
+# 2. Start wallet service
+cd wallet-service
+npm install
+npm start
+
+# 3. Start MEV engine
+cd ../mev-engine
+cargo run --release
+
+# 4. Start Python trading engine
+cd ../trading-agent/python-engine
+python main.py
+```
+
+### Quick Start (Live Mode)
+Set `account_mode.mode: live` in config.yaml and ensure biometric authentication is configured.
+
 ## Contributing
 
 1. Fork the repository

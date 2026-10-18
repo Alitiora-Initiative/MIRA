@@ -1,0 +1,8 @@
+{
+  "name": "mira-dashboard",
+  "version": "1.0.0",
+  "description": "MIRA Trading Agent Dashboard",
+  "scripts": {
+    "dev": "python -m http.server 3000"
+  }
+}
