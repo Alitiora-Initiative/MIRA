@@ -6,3 +6,6 @@ dist
 *.log
 package-lock.json
 backtesting-java/target/
+.vercel/
+.vscode/
+trading-agent/python-engine/run_mira_paper_trade.py
