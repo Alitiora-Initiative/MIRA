@@ -6,7 +6,7 @@ Autonomous, private AI trading agent for Solana ecosystem. Operates under contin
 
 ### Base Operational Systems
 - Initial Minimum Seed Capitalization: $0.60 USD equivalent in Native Solana (SOL)
-- Active Operational Allocation Unit: 0.001 SOL per discrete execution order
+- Active Operational Allocation Unit: 0.001 SOL minimum, 10 SOL maximum per order
 - Lifespan Capabilities: Daemonized runtime engine for 4-hour bursts, scaling to 244 hours with error-handling loops
 - Target Assets: Solana Memecoins, wrapped liquidity pool tokens, Tokenized Stocks
 - Data Aggregation: DexScreener Developer APIs, Birdeye APIs, Helius RPC streams
@@ -93,17 +93,20 @@ trading-agent/
 ## Installation
 
 ```bash
-# Clone repository
-git clone https://github.com/Alitiora-Initiative/MIRA.git
-cd MIRA
-
-# Install Python dependencies
+# From trading-agent/
 cd python-engine
 pip install -r requirements.txt
 
-# Configure settings
-cp ../config/config.example.yaml ../config/config.yaml
-# Edit config.yaml with your Solana RPC endpoints and MPC configuration
+# Paper trading. No keys, no live orders.
+# Omit MIRA_PAPER_CYCLES to keep the session running.
+MIRA_PAPER_CYCLES=12 MIRA_PAPER_SLEEP=0 python main.py
+```
+
+The launcher loads `config/config.paper.yaml` when `config.yaml` is missing. Clips are hard-limited to **0.001–10 SOL**. Live signing, Jito submission, and webhook alerts without `MIRA_WEBHOOK_KEY` stay off.
+
+```bash
+# Optional local overrides
+cp ../config/config.paper.yaml ../config/config.yaml
 ```
 
 ## Configuration
@@ -120,7 +123,7 @@ solana:
 trading:
   sol:
     min_trade: 0.001
-    max_trade: 100.0
+    max_trade: 10.0
     min_deposit: 0.60
 
 phi_matrix:

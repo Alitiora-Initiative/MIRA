@@ -14,8 +14,35 @@ RiskGateway::RiskGateway()
 RiskGateway::~RiskGateway() {
 }
 
+namespace {
+bool isSolClip(const std::string& symbol) {
+    if (symbol == "SOL" || symbol == "SOL-USD" || symbol == "SOL/USD") {
+        return true;
+    }
+    const std::string suffixes[] = {"-SOL", "/SOL"};
+    for (const auto& suffix : suffixes) {
+        if (symbol.size() >= suffix.size() &&
+            symbol.compare(symbol.size() - suffix.size(), suffix.size(), suffix) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+}  // namespace
+
 bool RiskGateway::checkPreTradeRisk(const Order& order) {
     std::lock_guard<std::mutex> lock(risk_mutex_);
+
+    if (!(order.quantity > 0.0) || !(order.price > 0.0)) {
+        std::cout << "Risk check failed: non-positive size or price" << std::endl;
+        return false;
+    }
+
+    // Paper and live SOL clips share the same hard band.
+    if (isSolClip(order.symbol) && (order.quantity < 0.001 || order.quantity > 10.0)) {
+        std::cout << "Risk check failed: SOL size outside 0.001-10" << std::endl;
+        return false;
+    }
 
     // Check position size
     if (order.quantity * order.price > max_position_size_) {

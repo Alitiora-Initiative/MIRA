@@ -3,10 +3,14 @@ Sub-Agent Horizontal Genesis System - Triggers capital-splitting and sub-agent p
 """
 
 import asyncio
-import docker
+import os
+import re
 from typing import Dict, Any, List, Optional
 from loguru import logger
 from dataclasses import dataclass
+
+ALLOWED_IMAGES = frozenset({"alpine", "python:3.11-alpine", "python:3.12-alpine"})
+AGENT_ID_RE = re.compile(r"^subagent-[0-9]{1,4}$")
 
 
 @dataclass
@@ -32,8 +36,17 @@ class SubagentGenesis:
         logger.info("Sub-Agent Genesis System initialized")
 
     async def initialize_docker(self):
-        """Initialize Docker client."""
+        """Initialize Docker client. Refuses unless explicitly enabled."""
+        if os.environ.get("MIRA_ENABLE_SUBAGENTS") != "1":
+            logger.info("Sub-agent containers stay off (set MIRA_ENABLE_SUBAGENTS=1 to allow)")
+            return
+        image = str(self.subagent_config.base_image)
+        if image not in ALLOWED_IMAGES:
+            logger.error(f"Refusing sub-agent image outside the allowlist: {image}")
+            return
         try:
+            import docker
+
             self.docker_client = docker.from_env()
             logger.info("Docker client initialized")
         except Exception as e:
@@ -116,16 +129,38 @@ class SubagentGenesis:
             Container ID or None
         """
         try:
+            if os.environ.get("MIRA_ENABLE_SUBAGENTS") != "1":
+                logger.error("Refusing to create a container: sub-agents are disabled")
+                return None
+            if not AGENT_ID_RE.match(subagent.agent_id):
+                logger.error(f"Refusing unsafe sub-agent id: {subagent.agent_id}")
+                return None
+            image = str(self.subagent_config.base_image)
+            if image not in ALLOWED_IMAGES:
+                logger.error(f"Refusing sub-agent image outside the allowlist: {image}")
+                return None
+            if not isinstance(subagent.funding_usd, (int, float)) or subagent.funding_usd < 0:
+                logger.error("Refusing non-numeric sub-agent funding")
+                return None
             if not self.docker_client:
                 await self.initialize_docker()
+            if not self.docker_client:
+                return None
 
             container = self.docker_client.containers.run(
-                image=self.subagent_config.base_image,
-                command=f"python -m subagent.main --agent-id={subagent.agent_id} --funding={subagent.funding_usd}",
-                mem_limit=f"{self.subagent_config.memory_limit_mb}m",
+                image=image,
+                command=[
+                    "python",
+                    "-m",
+                    "subagent.main",
+                    f"--agent-id={subagent.agent_id}",
+                    f"--funding={subagent.funding_usd}",
+                ],
+                mem_limit=f"{int(self.subagent_config.memory_limit_mb)}m",
                 cpu_quota=int(self.subagent_config.cpu_limit * 100000),
                 detach=True,
-                name=subagent.agent_id
+                name=subagent.agent_id,
+                network_disabled=True,
             )
 
             logger.info(f"Container created: {container.id}")

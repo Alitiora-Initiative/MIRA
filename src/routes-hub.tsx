@@ -24,7 +24,8 @@ function Home() {
   }, []);
 
   async function approve() {
-    const note = `MIRA intent ${new Date().toISOString()} size=0.001 SOL wallet=${pubkey ?? "unlinked"}`;
+    const size = position?.sizeSol ?? 0.001;
+    const note = `MIRA paper intent ${new Date().toISOString()} size=${size} SOL wallet=${pubkey ?? "unlinked"}`;
     try {
       const sig = await approveIntent(note);
       setSig(sig);
@@ -40,8 +41,7 @@ function Home() {
           <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">MIRA // Global hub</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">Google Phantom. No seed phrase.</h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            You made this wallet with Google inside Phantom. Phantom keeps the key. MIRA only reads the public
-            address and asks Phantom to approve each 0.001 SOL order.
+            Paper book only. Phantom keeps the key. Each fill is clipped to 0.001–10 SOL and still needs your approval.
           </p>
         </div>
         <p className="font-mono text-xs text-amber">Active contracts {active}</p>
@@ -108,7 +108,7 @@ function Home() {
             <p className="text-sm font-medium">Next order needs your thumb, not a private key.</p>
             <p className="text-xs text-muted">
               {position
-                ? `Staged $${position.ticker} · 0.001 SOL · TP +${(position.tp * 100).toFixed(0)}% / SL −${(position.sl * 100).toFixed(0)}%`
+                ? `Paper $${position.ticker} · ${position.sizeSol} SOL · TP +${(position.tp * 100).toFixed(0)}% / SL −${(position.sl * 100).toFixed(0)}%`
                 : "Arm the agent on Analytics. When a setup clears Φ ≥ 85 and the OU band, approve it here."}
             </p>
           </div>

@@ -64,7 +64,8 @@ function Dashboard() {
             <span>Value</span>
           </div>
           {[
-            ["Active trade size", "0.001 SOL"],
+            ["SOL clip", "0.001 – 10"],
+            ["Mode", "paper"],
             ["Take-profit band", "+10% → +1000%"],
             ["Stop-loss band", "−10% → −40%"],
             ["Open position", position ? `$${position.ticker}` : "none"],
@@ -95,8 +96,7 @@ function Dashboard() {
         </p>
         {nodes.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted">
-            None yet. The master loop keeps trading 0.001 SOL clips until the session marks +$20, then stages ten
-            $1 nodes. They live in this browser session — not a server you have to install.
+            None yet. Paper clips stay inside 0.001–10 SOL. Ten $1 nodes stage only after the session marks +$20.
           </p>
         ) : (
           nodes.map((n) => (
