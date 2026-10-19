@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/mira/shell";
 import { KNOWN_VAULT, shortKey } from "@/lib/mira/phantom";
 import { useMira } from "@/lib/mira/store";
+import { Activity, Zap, Cpu, BarChart3 } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({ component: Dashboard });
 
@@ -23,33 +24,40 @@ function Dashboard() {
 
   return (
     <Shell>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted">MIRA // Analytics</p>
-          <h1 className="text-2xl font-semibold">Recursive capital desk</h1>
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal-dim/20 px-3 py-1 mb-3">
+            <BarChart3 size={14} className="text-teal" />
+            <span className="font-mono text-xs text-teal">ANALYTICS</span>
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Recursive capital desk</h1>
         </div>
-        <span className="rounded-full border border-teal/40 px-3 py-1 font-mono text-xs text-teal">
+        <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 font-mono text-xs backdrop-blur-sm transition-all duration-300 ${armed ? "border-teal/40 bg-teal-dim/30 text-teal shadow-glow" : "border-line/50 bg-surface-2/30 text-muted"}`}>
+          <span className={`w-2 h-2 rounded-full ${armed ? "bg-teal live-dot" : "bg-muted"}`}></span>
           {armed ? "SYSTEM OK" : "HALTED"}
         </span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <article className="rounded-2xl border border-line bg-surface p-4">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Initial floor</p>
-          <p className="mt-2 text-3xl font-semibold">${usd.toFixed(2)}</p>
-          <p className="font-mono text-xs text-muted">{balanceSol.toFixed(6)} SOL · min seed $0.60</p>
-          <p className="mt-3 truncate font-mono text-xs text-teal">
+      <div className="grid gap-6 md:grid-cols-2">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass hover:shadow-glow transition-all duration-300">
+          <div className="flex items-center gap-2 mb-3">
+            <Activity className="text-teal" size={18} />
+            <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Initial floor</p>
+          </div>
+          <p className="mt-2 text-4xl font-bold bg-gradient-to-r from-fg to-teal bg-clip-text text-transparent">${usd.toFixed(2)}</p>
+          <p className="font-mono text-xs text-muted mt-2">{balanceSol.toFixed(6)} SOL · min seed $0.60</p>
+          <p className="mt-4 truncate font-mono text-xs text-teal">
             Base wallet {pubkey ? shortKey(pubkey) : `${shortKey(KNOWN_VAULT)} (not linked)`}
           </p>
           <p className="mt-1 text-xs text-muted">MPC split stays inside Phantom. This page never stores a key.</p>
         </article>
-        <article className="rounded-2xl border border-line bg-surface p-4">
-          <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass hover:shadow-glow transition-all duration-300">
+          <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted mb-3">
             <span>Progress · step {prev} → {next} SOL</span>
             <span className="text-amber">{pct.toFixed(1)}%</span>
           </div>
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full rounded-full bg-teal" style={{ width: `${pct}%` }} />
+          <div className="mt-4 h-4 overflow-hidden rounded-full bg-surface-2/50">
+            <div className="h-full rounded-full bg-gradient-to-r from-teal to-teal-light shadow-glow transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <p className="mt-3 font-mono text-xs text-muted">
             {balanceSol.toFixed(2)} / {next.toFixed(2)} SOL · P = (B − Tₙ) / (Tₙ₊₁ − Tₙ)
@@ -57,9 +65,9 @@ function Dashboard() {
         </article>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-        <article className="rounded-2xl border border-line bg-surface">
-          <div className="grid grid-cols-2 border-b border-line px-4 py-2 font-mono text-[11px] uppercase text-muted">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass">
+          <div className="grid grid-cols-2 border-b border-line/50 px-4 py-3 font-mono text-[11px] uppercase text-muted bg-surface-2/30">
             <span>Parameter</span>
             <span>Value</span>
           </div>
@@ -71,17 +79,20 @@ function Dashboard() {
             ["Entry Φ gate", "≥ 85%"],
             ["Signing", "Phantom approval"],
           ].map(([k, v]) => (
-            <div key={k} className="grid grid-cols-2 border-b border-line px-4 py-3 text-sm last:border-0">
+            <div key={k} className="grid grid-cols-2 border-b border-line/50 px-4 py-3 text-sm last:border-0 hover:bg-surface-2/20 transition-colors duration-200">
               <span className="text-muted">{k}</span>
               <span className="font-mono">{v}</span>
             </div>
           ))}
         </article>
-        <article className="rounded-2xl border border-line bg-surface p-4">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Execution telemetry</p>
-          <ul className="mt-3 space-y-2">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass">
+          <div className="flex items-center gap-2 mb-3">
+            <Zap className="text-teal" size={18} />
+            <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Execution telemetry</p>
+          </div>
+          <ul className="mt-3 space-y-2 max-h-64 overflow-y-auto">
             {ticks.map((tick, i) => (
-              <li key={`${tick.t}-${i}`} className="font-mono text-xs leading-relaxed text-fg/90">
+              <li key={`${tick.t}-${i}`} className="font-mono text-xs leading-relaxed text-fg/90 px-3 py-2 rounded-lg hover:bg-surface-2/30 transition-colors duration-200">
                 <span className="text-muted">[{tick.t}]</span> {tick.msg}
               </li>
             ))}
@@ -89,10 +100,11 @@ function Dashboard() {
         </article>
       </div>
 
-      <article className="mt-4 overflow-hidden rounded-2xl border border-line">
-        <p className="bg-surface-2 px-4 py-2 font-mono text-[11px] uppercase tracking-wider text-muted">
-          Sub-agent nodes · spawn after +$20 net
-        </p>
+      <article className="mt-6 overflow-hidden rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass">
+        <div className="flex items-center gap-2 bg-surface-2/30 px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-muted border-b border-line/50">
+          <Cpu className="text-teal" size={16} />
+          <span>Sub-agent nodes · spawn after +$20 net</span>
+        </div>
         {nodes.length === 0 ? (
           <p className="px-4 py-6 text-sm text-muted">
             None yet. The master loop keeps trading 0.001 SOL clips until the session marks +$20, then stages ten
@@ -102,7 +114,7 @@ function Dashboard() {
           nodes.map((n) => (
             <div
               key={n.id}
-              className="grid grid-cols-2 gap-2 border-t border-line px-4 py-3 text-sm sm:grid-cols-4"
+              className="grid grid-cols-2 gap-2 border-t border-line/50 px-4 py-4 text-sm sm:grid-cols-4 hover:bg-surface-2/20 transition-colors duration-200"
             >
               <span className="font-mono">{n.id}</span>
               <span className={n.status === "RUNNING" ? "text-teal" : "text-amber"}>{n.status}</span>
