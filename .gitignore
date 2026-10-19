@@ -4,6 +4,8 @@ dist
 .env.local
 .DS_Store
 *.log
+*.db
+mira_paper.db
 package-lock.json
 backtesting-java/target/
 .vercel/

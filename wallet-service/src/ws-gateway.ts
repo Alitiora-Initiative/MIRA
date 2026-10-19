@@ -5,6 +5,7 @@
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
+import { timingSafeEqual } from 'crypto';
 import { WalletManager } from './wallet-manager';
 import { SignerService } from './signer-service';
 
@@ -26,7 +27,7 @@ export class WsGateway {
   constructor(port: number, walletManager: WalletManager, signerService: SignerService) {
     this.walletManager = walletManager;
     this.signerService = signerService;
-    this.wss = new WebSocketServer({ port });
+    this.wss = new WebSocketServer({ host: '127.0.0.1', port });
 
     this.wss.on('connection', (ws: WebSocket) => {
       this.clients.add(ws);
@@ -56,29 +57,41 @@ export class WsGateway {
     this.startBalanceUpdates();
   }
 
+  private clientAllowed(data: { authToken?: string }): boolean {
+    const expected = process.env.MIRA_WS_TOKEN || '';
+    const presented = data.authToken || '';
+    if (!expected || !presented) return false;
+    const left = Buffer.from(presented);
+    const right = Buffer.from(expected);
+    if (left.length !== right.length) return false;
+    return timingSafeEqual(left, right);
+  }
+
   /**
-   * Handle messages from clients
+   * Handle messages from clients. Secrets are never echoed back.
    */
   private handleClientMessage(ws: WebSocket, data: any): void {
+    if (!this.clientAllowed(data)) {
+      ws.close(4001, 'unauthorized');
+      return;
+    }
     const { action, walletAddress } = data;
 
     switch (action) {
       case 'subscribe':
-        // Subscribe to wallet updates
         this.sendToClient(ws, {
           channel: 'wallet:status',
-          data: this.walletManager.getWalletState(walletAddress),
+          data: this.walletManager.toPublic(this.walletManager.getWalletState(walletAddress)),
           timestamp: Date.now()
         });
         break;
 
       case 'get_balance':
-        // Send current balance
         this.pushBalanceUpdate(walletAddress);
         break;
 
       default:
-        console.log('Unknown action:', action);
+        console.log('Unknown action');
     }
   }
 
@@ -165,7 +178,7 @@ export class WsGateway {
     if (walletState) {
       this.broadcast({
         channel: 'wallet:status',
-        data: walletState,
+        data: this.walletManager.toPublic(walletState),
         timestamp: Date.now()
       });
     }

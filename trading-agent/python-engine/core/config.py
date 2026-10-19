@@ -2,20 +2,45 @@
 Configuration management for MIRA trading agent.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, Any
+from dataclasses import dataclass, field, fields, is_dataclass
+from typing import Any, Dict, Mapping, Type, TypeVar
+
+from paper.limits import MAX_SOL, MIN_SOL
+
+T = TypeVar("T")
+
+
+def _build(cls: Type[T], raw: Any) -> T:
+    if isinstance(raw, cls):
+        return raw
+    if raw is None:
+        return cls()  # type: ignore[call-arg]
+    if not isinstance(raw, dict):
+        raise TypeError(f"{cls.__name__} expected a mapping, got {type(raw).__name__}")
+    known = {item.name: item for item in fields(cls)}
+    kwargs: Dict[str, Any] = {}
+    for name, item in known.items():
+        if name not in raw:
+            continue
+        value = raw[name]
+        ftype = item.type
+        if isinstance(ftype, type) and is_dataclass(ftype):
+            kwargs[name] = _build(ftype, value)
+        else:
+            kwargs[name] = value
+    return cls(**kwargs)  # type: ignore[arg-type]
 
 
 @dataclass
 class GeneralConfig:
     log_level: str = "INFO"
-    environment: str = "devnet"
+    environment: str = "paper"
     timezone: str = "UTC"
 
 
 @dataclass
 class SolanaConfig:
-    rpc_endpoint: str
+    rpc_endpoint: str = ""
     commitment: str = "confirmed"
     jito_endpoint: str = ""
     jito_tip_lamports: int = 1000
@@ -25,10 +50,16 @@ class SolanaConfig:
 
 @dataclass
 class TradingConfig:
-    max_position_size: float = 0.1
+    max_position_size: float = MAX_SOL
     max_daily_loss: float = 0.05
     max_open_positions: int = 5
-    sol: Dict[str, Any] = field(default_factory=dict)
+    sol: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "min_trade": MIN_SOL,
+            "max_trade": MAX_SOL,
+            "min_deposit": 0.60,
+        }
+    )
     assets: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -74,7 +105,7 @@ class ScalingConfig:
 
 @dataclass
 class SubagentConfig:
-    base_image: str = "alpine"
+    base_image: str = "python:3.12-alpine"
     memory_limit_mb: int = 128
     cpu_limit: float = 0.25
 
@@ -87,16 +118,16 @@ class DatabaseConfig:
 
 @dataclass
 class WalletServiceConfig:
-    grpc_endpoint: str = "localhost:50051"
-    ws_endpoint: str = "ws://localhost:8080"
+    grpc_endpoint: str = "127.0.0.1:50051"
+    ws_endpoint: str = "ws://127.0.0.1:8080"
     biometric_timeout_seconds: int = 300
     hardware_wallet_required: bool = False
 
 
 @dataclass
 class MevEngineConfig:
-    enabled: bool = True
-    grpc_endpoint: str = "localhost:50052"
+    enabled: bool = False
+    grpc_endpoint: str = "127.0.0.1:50052"
     private_mempool: str = "jito"
     max_slippage_bps: int = 300
     sandwich_detection: bool = True
@@ -105,8 +136,15 @@ class MevEngineConfig:
 
 @dataclass
 class AccountModeConfig:
-    mode: str = "demo"  # demo or live
-    demo: Dict[str, Any] = field(default_factory=dict)
+    mode: str = "demo"
+    demo: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "paper_trading": True,
+            "initial_balance_sol": 25.0,
+            "simulate_slippage": True,
+            "simulate_execution": True,
+        }
+    )
     live: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -154,3 +192,9 @@ class Config:
     analytics: AnalyticsConfig = field(default_factory=AnalyticsConfig)
     backtesting: BacktestingConfig = field(default_factory=BacktestingConfig)
     external_bridges: ExternalBridgesConfig = field(default_factory=ExternalBridgesConfig)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "Config":
+        if not isinstance(data, dict):
+            raise TypeError("config root must be a mapping")
+        return _build(cls, data)

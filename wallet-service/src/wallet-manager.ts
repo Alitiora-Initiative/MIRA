@@ -4,6 +4,19 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+
+export interface PublicWalletState {
+  isLocked: boolean;
+  walletAddress: string;
+  supportedChains: string[];
+  lastUnlockedTimestamp: number;
+}
+
+interface PasswordVerifier {
+  salt: Buffer;
+  hash: Buffer;
+}
 
 export interface WalletState {
   isLocked: boolean;
@@ -16,8 +29,37 @@ export interface WalletState {
 
 export class WalletManager {
   private wallets: Map<string, WalletState> = new Map();
+  private verifiers: Map<string, PasswordVerifier> = new Map();
   private sessionTimeout: number = 300000; // 5 minutes
   private biometricTimeout: number = 60000; // 1 minute
+
+  /**
+   * Enroll a wallet password. Unlock fails closed until this succeeds.
+   * The password is stored only as a scrypt hash.
+   */
+  enrollWallet(walletAddress: string, password: string): { success: boolean; error?: string } {
+    if (!walletAddress || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress)) {
+      return { success: false, error: 'Invalid wallet address' };
+    }
+    if (!password || password.length < 12) {
+      return { success: false, error: 'Password must be at least 12 characters' };
+    }
+    const salt = randomBytes(16);
+    const hash = scryptSync(password, salt, 32);
+    this.verifiers.set(walletAddress, { salt, hash });
+    this.getOrCreateWallet(walletAddress);
+    return { success: true };
+  }
+
+  toPublic(wallet: WalletState | null): PublicWalletState | null {
+    if (!wallet) return null;
+    return {
+      isLocked: wallet.isLocked,
+      walletAddress: wallet.walletAddress,
+      supportedChains: wallet.supportedChains,
+      lastUnlockedTimestamp: wallet.lastUnlockedTimestamp,
+    };
+  }
 
   /**
    * Create or get wallet state
@@ -39,14 +81,20 @@ export class WalletManager {
    * Unlock wallet with password and generate biometric token
    */
   unlockWallet(walletAddress: string, password: string): { success: boolean; sessionToken?: string; biometricToken?: string; error?: string } {
-    const wallet = this.getOrCreateWallet(walletAddress);
-
-    // In production, validate password against encrypted storage
-    // For now, we'll accept any non-empty password
-    if (!password || password.length < 8) {
+    const verifier = this.verifiers.get(walletAddress);
+    if (!verifier) {
+      return { success: false, error: 'Wallet is not enrolled' };
+    }
+    if (!password) {
       return { success: false, error: 'Invalid password' };
     }
 
+    const hash = scryptSync(password, verifier.salt, 32);
+    if (hash.length !== verifier.hash.length || !timingSafeEqual(hash, verifier.hash)) {
+      return { success: false, error: 'Invalid password' };
+    }
+
+    const wallet = this.getOrCreateWallet(walletAddress);
     const sessionToken = uuidv4();
     const biometricToken = uuidv4();
 

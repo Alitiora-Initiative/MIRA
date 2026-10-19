@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, Radio, Zap } from "lucide-react";
+import { Activity, Radio } from "lucide-react";
 import { useEffect } from "react";
 import { connectPhantom, disconnectPhantom, fetchSolBalance, phantomInstalled, shortKey } from "@/lib/mira/phantom";
 import { useMira } from "@/lib/mira/store";

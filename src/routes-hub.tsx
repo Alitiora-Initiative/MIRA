@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ShieldCheck, Zap, TrendingUp } from "lucide-react";
+import { ShieldCheck, TrendingUp, Zap } from "lucide-react";
 import { PriceChart } from "@/components/mira/price-chart";
 import { Shell } from "@/components/mira/shell";
 import { approveIntent, phantomInstalled } from "@/lib/mira/phantom";
 import { useMira } from "@/lib/mira/store";
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/")({
+  component: Home,
+});
 
 const PAIRS = ["SOL-USD", "BONK-SOL", "WIF-SOL", "POPCAT-SOL", "wAAPL-SOL", "wNVDA-SOL"];
 
@@ -24,7 +26,8 @@ function Home() {
   }, []);
 
   async function approve() {
-    const note = `MIRA intent ${new Date().toISOString()} size=0.001 SOL wallet=${pubkey ?? "unlinked"}`;
+    const size = position?.sizeSol ?? 0.001;
+    const note = `MIRA paper intent ${new Date().toISOString()} size=${size} SOL wallet=${pubkey ?? "unlinked"}`;
     try {
       const sig = await approveIntent(note);
       setSig(sig);
@@ -45,8 +48,7 @@ function Home() {
             Google Phantom. No seed phrase.
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted">
-            You made this wallet with Google inside Phantom. Phantom keeps the key. MIRA only reads the public
-            address and asks Phantom to approve each 0.001 SOL order.
+            Paper book only. Phantom keeps the key. Each fill is clipped to 0.001–10 SOL and still needs your approval.
           </p>
         </div>
         <div className="flex items-center gap-3 rounded-2xl border border-teal/30 bg-teal-dim/20 backdrop-blur-sm px-6 py-4">
@@ -124,7 +126,7 @@ function Home() {
             <p className="text-sm font-medium">Next order needs your thumb, not a private key.</p>
             <p className="text-xs text-muted mt-1">
               {position
-                ? `Staged $${position.ticker} · 0.001 SOL · TP +${(position.tp * 100).toFixed(0)}% / SL −${(position.sl * 100).toFixed(0)}%`
+                ? `Paper $${position.ticker} · ${position.sizeSol ?? 0.001} SOL · TP +${(position.tp * 100).toFixed(0)}% / SL −${(position.sl * 100).toFixed(0)}%`
                 : "Arm the agent on Analytics. When a setup clears Φ ≥ 85 and the OU band, approve it here."}
             </p>
           </div>

@@ -3,7 +3,7 @@
 # General Settings
 general:
   log_level: INFO
-  environment: mainnet  # Options: devnet, mainnet
+  environment: paper  # Options: paper, devnet, mainnet. Launch stays on paper.
   timezone: UTC
 
 # Solana Configuration
@@ -23,7 +23,7 @@ trading:
 
   sol:
     min_trade: 0.001
-    max_trade: 100.0
+    max_trade: 10.0
     min_deposit: 0.60
 
   assets:
@@ -90,7 +90,7 @@ wallet_service:
 
 # MEV Engine Configuration
 mev_engine:
-  enabled: true
+  enabled: false
   grpc_endpoint: localhost:50052
   private_mempool: jito
   max_slippage_bps: 300
@@ -99,12 +99,12 @@ mev_engine:
 
 # Account Mode Configuration
 account_mode:
-  mode: live  # Options: demo, live
+  mode: demo  # Options: demo, live. Live signing is refused by the paper entrypoint.
   demo:
-    paper_trading: false
-    initial_balance_usd: 10000
-    simulate_slippage: false
-    simulate_execution: false
+    paper_trading: true
+    initial_balance_sol: 25.0
+    simulate_slippage: true
+    simulate_execution: true
   live:
     require_biometric: true
     require_hardware_wallet: true
@@ -190,7 +190,7 @@ backtesting:
 external_bridges:
   database:
     type: postgresql
-    connection_string: postgresql://user:pass@localhost/trading_data
+    connection_string: postgresql://localhost/trading_data
     connection_pool_size: 10
 
   webhooks:
@@ -202,8 +202,8 @@ external_bridges:
     authentication:
       type: "api_key"
       keys:
-        tradingview: "tv_secret_key"
-        metatrader: "mt_secret_key"
+        tradingview: ""
+        metatrader: ""
 
   pine_script:
     indicators:
@@ -276,7 +276,7 @@ ai_toolkit:
       enabled: true
       api_key: ""
       api_secret: ""
-      testnet: false
+      testnet: true
     trigger_trade:
       enabled: true
       webhook_url: ""

@@ -77,38 +77,109 @@ func (dn *DataNormalizer) connectKafka() error {
 	return nil
 }
 
-func (dn *DataNormalizer) normalizeTransfer(data map[string]interface{}) NormalizedEvent {
-	return NormalizedEvent{
-		Chain:     "solana",
-		EventType: "transfer",
-		Timestamp: int64(data["timestamp"].(float64)),
-		Signature: data["signature"].(string),
-		From:      data["from"].(string),
-		To:        data["to"].(string),
-		Amount:    data["amount"].(float64),
-		Token:     data["token"].(string),
-		Metadata:  make(map[string]interface{}),
+func asString(data map[string]interface{}, key string) (string, error) {
+	value, ok := data[key]
+	if !ok || value == nil {
+		return "", fmt.Errorf("missing %s", key)
+	}
+	text, ok := value.(string)
+	if !ok || text == "" {
+		return "", fmt.Errorf("%s is not a string", key)
+	}
+	return text, nil
+}
+
+func asFloat(data map[string]interface{}, key string) (float64, error) {
+	value, ok := data[key]
+	if !ok || value == nil {
+		return 0, fmt.Errorf("missing %s", key)
+	}
+	switch number := value.(type) {
+	case float64:
+		return number, nil
+	case json.Number:
+		return number.Float64()
+	default:
+		return 0, fmt.Errorf("%s is not a number", key)
 	}
 }
 
-func (dn *DataNormalizer) normalizeSwap(data map[string]interface{}) NormalizedEvent {
+func (dn *DataNormalizer) normalizeTransfer(data map[string]interface{}) (NormalizedEvent, error) {
+	timestamp, err := asFloat(data, "timestamp")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	signature, err := asString(data, "signature")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	from, err := asString(data, "from")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	to, err := asString(data, "to")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	amount, err := asFloat(data, "amount")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	token, err := asString(data, "token")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	return NormalizedEvent{
+		Chain:     "solana",
+		EventType: "transfer",
+		Timestamp: int64(timestamp),
+		Signature: signature,
+		From:      from,
+		To:        to,
+		Amount:    amount,
+		Token:     token,
+		Metadata:  make(map[string]interface{}),
+	}, nil
+}
+
+func (dn *DataNormalizer) normalizeSwap(data map[string]interface{}) (NormalizedEvent, error) {
+	timestamp, err := asFloat(data, "timestamp")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	signature, err := asString(data, "signature")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	pool, err := asString(data, "pool_address")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	amount, err := asFloat(data, "amount_in")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
+	token, err := asString(data, "token_in")
+	if err != nil {
+		return NormalizedEvent{}, err
+	}
 	return NormalizedEvent{
 		Chain:       "solana",
 		EventType:   "swap",
-		Timestamp:   int64(data["timestamp"].(float64)),
-		Signature:   data["signature"].(string),
-		From:        data["pool_address"].(string),
-		To:          data["pool_address"].(string),
-		Amount:      data["amount_in"].(float64),
-		Token:       data["token_in"].(string),
-		PoolAddress: data["pool_address"].(string),
+		Timestamp:   int64(timestamp),
+		Signature:   signature,
+		From:        pool,
+		To:          pool,
+		Amount:      amount,
+		Token:       token,
+		PoolAddress: pool,
 		Metadata: map[string]interface{}{
-			"token_out":     data["token_out"],
-			"amount_out":    data["amount_out"],
-			"price_impact":  data["price_impact"],
-			"block_number":  data["block_number"],
+			"token_out":    data["token_out"],
+			"amount_out":   data["amount_out"],
+			"price_impact": data["price_impact"],
+			"block_number": data["block_number"],
 		},
-	}
+	}, nil
 }
 
 func (dn *DataNormalizer) processMessage(data []byte) error {
@@ -118,15 +189,15 @@ func (dn *DataNormalizer) processMessage(data []byte) error {
 	}
 
 	var normalized NormalizedEvent
+	var err error
 
-	// Determine event type and normalize
-	eventType, ok := rawMsg["token_in"].(string)
-	if ok {
-		// It's a swap
-		normalized = dn.normalizeSwap(rawMsg)
+	if _, ok := rawMsg["token_in"].(string); ok {
+		normalized, err = dn.normalizeSwap(rawMsg)
 	} else {
-		// It's a transfer
-		normalized = dn.normalizeTransfer(rawMsg)
+		normalized, err = dn.normalizeTransfer(rawMsg)
+	}
+	if err != nil {
+		return fmt.Errorf("drop malformed event: %w", err)
 	}
 
 	// Publish normalized event

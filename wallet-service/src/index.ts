@@ -6,6 +6,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
+import { timingSafeEqual } from 'crypto';
 import { WalletManager } from './wallet-manager';
 import { SignerService } from './signer-service';
 import { WsGateway } from './ws-gateway';
@@ -16,7 +17,24 @@ dotenv.config();
 const PROTO_PATH = join(__dirname, '../proto/wallet.proto');
 const PORT = process.env.GRPC_PORT || '50051';
 const WS_PORT = process.env.WS_PORT || '8080';
+const GRPC_HOST = process.env.MIRA_GRPC_HOST || '127.0.0.1';
 const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+
+function authorized(call: { metadata: grpc.Metadata }): boolean {
+  const expected = process.env.MIRA_WALLET_TOKEN || '';
+  if (!expected) return false;
+  const raw = call.metadata.get('authorization')[0];
+  const presented = typeof raw === 'string' ? raw : Buffer.isBuffer(raw) ? raw.toString('utf8') : '';
+  const token = presented.startsWith('Bearer ') ? presented.slice(7) : presented;
+  const left = Buffer.from(token);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length || left.length === 0) return false;
+  return timingSafeEqual(left, right);
+}
+
+function deny(callback: (err: unknown, value: unknown) => void) {
+  callback(null, { success: false, error: 'unauthorized' });
+}
 
 // Load protobuf
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -33,6 +51,15 @@ const walletProto = grpc.loadPackageDefinition(packageDefinition).wallet as any;
 const walletManager = new WalletManager();
 const signerService = new SignerService(walletManager, SOLANA_RPC_URL);
 
+const enrolledAddress = process.env.MIRA_WALLET_ADDRESS || '';
+const enrolledPassword = process.env.MIRA_WALLET_PASSWORD || '';
+if (enrolledAddress && enrolledPassword) {
+  const enrolled = walletManager.enrollWallet(enrolledAddress, enrolledPassword);
+  if (!enrolled.success) {
+    console.error('Wallet enrollment failed:', enrolled.error);
+  }
+}
+
 // Add EVM provider if configured
 if (process.env.EVM_RPC_URL) {
   signerService.addEvmProvider('ethereum', process.env.EVM_RPC_URL);
@@ -44,6 +71,10 @@ const wsGateway = new WsGateway(parseInt(WS_PORT), walletManager, signerService)
 // Implement gRPC service
 const walletService = {
   GetWalletState: (call: any, callback: any) => {
+    if (!authorized(call)) {
+      deny(callback);
+      return;
+    }
     const { wallet_address } = call.request;
     const state = walletManager.getWalletState(wallet_address);
 
@@ -65,6 +96,10 @@ const walletService = {
   },
 
   SignTransaction: async (call: any, callback: any) => {
+    if (!authorized(call)) {
+      deny(callback);
+      return;
+    }
     const { wallet_address, transaction_bytes, chain, biometric_token } = call.request;
 
     const response = await signerService.signTransaction({
@@ -94,6 +129,10 @@ const walletService = {
   },
 
   GetBalance: async (call: any, callback: any) => {
+    if (!authorized(call)) {
+      deny(callback);
+      return;
+    }
     const { wallet_address, asset_symbol } = call.request;
 
     // Default to Solana for now
@@ -114,6 +153,10 @@ const walletService = {
   },
 
   BroadcastTransaction: async (call: any, callback: any) => {
+    if (!authorized(call)) {
+      deny(callback);
+      return;
+    }
     const { wallet_address, signed_transaction, chain } = call.request;
 
     const response = await signerService.broadcastTransaction(
@@ -136,7 +179,11 @@ const walletService = {
   },
 
   UnlockWallet: (call: any, callback: any) => {
-    const { wallet_address, password, biometric_token } = call.request;
+    if (!authorized(call)) {
+      deny(callback);
+      return;
+    }
+    const { wallet_address, password } = call.request;
 
     const response = walletManager.unlockWallet(wallet_address, password);
 
@@ -158,6 +205,10 @@ const walletService = {
   },
 
   LockWallet: (call: any, callback: any) => {
+    if (!authorized(call)) {
+      deny(callback);
+      return;
+    }
     const { wallet_address, session_token } = call.request;
 
     const response = walletManager.lockWallet(wallet_address, session_token);
@@ -183,7 +234,7 @@ const server = new grpc.Server();
 server.addService(walletProto.WalletService.service, walletService);
 
 server.bindAsync(
-  `0.0.0.0:${PORT}`,
+  `${GRPC_HOST}:${PORT}`,
   grpc.ServerCredentials.createInsecure(),
   (error: Error | null, port: number) => {
     if (error) {
@@ -191,9 +242,8 @@ server.bindAsync(
       return;
     }
 
-    console.log(`Wallet Service gRPC server running on port ${port}`);
-    console.log(`WebSocket gateway running on port ${WS_PORT}`);
-    console.log(`Solana RPC: ${SOLANA_RPC_URL}`);
+    console.log(`Wallet Service gRPC server running on ${GRPC_HOST}:${port}`);
+    console.log(`WebSocket gateway running on 127.0.0.1:${WS_PORT}`);
   }
 );
 

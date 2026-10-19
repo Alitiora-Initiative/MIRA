@@ -1,11 +1,15 @@
 """
-Account Manager for Demo/Live trading modes
-Handles paper trading simulation and live trading validation
+Account Manager for paper and live modes.
+
+Paper mode simulates SOL clips. Live mode does not invent fills.
 """
 
-from typing import Dict, Any, Optional
+from datetime import datetime, timezone
+from typing import Dict, Any
 from loguru import logger
 from enum import Enum
+
+from paper.limits import bounds, size_allowed
 
 
 class AccountMode(Enum):
@@ -14,33 +18,55 @@ class AccountMode(Enum):
 
 
 class AccountManager:
-    """Manages demo and live account modes."""
+    """Manages paper and live account modes."""
 
     def __init__(self, config):
         self.config = config
         self.account_mode = AccountMode(config.account_mode.mode)
-        self.demo_balance = config.account_mode.demo.get('initial_balance_usd', 10000)
+        demo = config.account_mode.demo or {}
+        self.paper = self.account_mode == AccountMode.DEMO and bool(demo.get("paper_trading", False))
+        if "initial_balance_sol" in demo:
+            self.demo_balance = float(demo["initial_balance_sol"])
+        else:
+            # Legacy configs stored a USD figure here. Do not treat that as SOL.
+            self.demo_balance = 25.0
         self.current_balance = self.demo_balance
-        self.positions = {}
+        self.positions: Dict[str, float] = {}
+        self.entries: Dict[str, float] = {}
         self.trades = []
+        self.slippage = 0.001 if demo.get("simulate_slippage", True) else 0.0
 
-        logger.info(f"Account Manager initialized in {self.account_mode.value} mode")
+        logger.info(
+            f"Account Manager initialized in {self.account_mode.value} mode "
+            f"(paper={self.paper}, bank={self.demo_balance} SOL)"
+        )
 
     def is_demo_mode(self) -> bool:
-        """Check if running in demo mode."""
         return self.account_mode == AccountMode.DEMO
 
     def is_live_mode(self) -> bool:
-        """Check if running in live mode."""
         return self.account_mode == AccountMode.LIVE
 
     def get_balance(self) -> float:
-        """Get current account balance."""
-        if self.is_demo_mode():
+        if self.paper:
             return self.current_balance
-        else:
-            # In live mode, balance would come from wallet service
-            return 0.0  # Placeholder
+        return 0.0
+
+    def _reject_live(self) -> Dict[str, Any]:
+        logger.warning("Live order refused. MIRA is in paper-only execution.")
+        return {
+            "success": False,
+            "error": "Live trading is disabled. Start with account_mode.mode=demo and paper_trading=true.",
+        }
+
+    def _check_size(self, size_sol: float) -> Dict[str, Any] | None:
+        if not size_allowed(size_sol, self.config.trading.sol):
+            minimum, maximum = bounds(self.config.trading.sol)
+            return {
+                "success": False,
+                "error": f"Size {size_sol} SOL is outside {minimum}-{maximum} SOL",
+            }
+        return None
 
     def execute_trade(
         self,
@@ -49,167 +75,91 @@ class AccountManager:
         quantity: float,
         price: float
     ) -> Dict[str, Any]:
-        """
-        Execute a trade (simulated in demo, real in live).
-
-        Args:
-            symbol: Trading symbol
-            side: 'buy' or 'sell'
-            quantity: Trade quantity
-            price: Trade price
-
-        Returns:
-            Trade result
-        """
-        if self.is_demo_mode():
-            return self._execute_demo_trade(symbol, side, quantity, price)
-        else:
-            return self._execute_live_trade(symbol, side, quantity, price)
-
-    def _execute_demo_trade(
-        self,
-        symbol: str,
-        side: str,
-        quantity: float,
-        price: float
-    ) -> Dict[str, Any]:
-        """Execute simulated trade in demo mode."""
-        trade_value = quantity * price
-
+        """Execute a paper SOL clip. `quantity` is SOL notional, not a token count."""
+        if not self.paper:
+            return self._reject_live()
         if side == "buy":
-            if trade_value > self.current_balance:
-                logger.warning(f"Insufficient balance for buy: {trade_value} > {self.current_balance}")
-                return {"success": False, "error": "Insufficient balance"}
+            return self.open_paper(symbol, quantity, price)
+        if side == "sell":
+            return self.close_paper(symbol, price)
+        return {"success": False, "error": "side must be buy or sell"}
 
-            self.current_balance -= trade_value
-            self.positions[symbol] = self.positions.get(symbol, 0) + quantity
-        else:  # sell
-            if symbol not in self.positions or self.positions[symbol] < quantity:
-                logger.warning(f"Insufficient position for sell: {symbol}")
-                return {"success": False, "error": "Insufficient position"}
+    def open_paper(self, symbol: str, size_sol: float, price: float) -> Dict[str, Any]:
+        if not self.paper:
+            return self._reject_live()
+        rejected = self._check_size(size_sol)
+        if rejected:
+            return rejected
+        if price <= 0:
+            return {"success": False, "error": "Price must be positive"}
+        if symbol in self.positions:
+            return {"success": False, "error": "Position already open"}
+        if size_sol > self.current_balance + 1e-12:
+            return {"success": False, "error": "Insufficient paper SOL"}
 
-            self.current_balance += trade_value
-            self.positions[symbol] -= quantity
+        self.current_balance -= size_sol
+        self.positions[symbol] = size_sol
+        self.entries[symbol] = price
+        trade = self._record(symbol, "buy", size_sol, price, size_sol, "open")
+        logger.info(f"Paper buy {size_sol} SOL {symbol} @ {price}")
+        return {"success": True, "trade": trade, "balance": self.current_balance}
 
+    def close_paper(self, symbol: str, price: float) -> Dict[str, Any]:
+        if not self.paper:
+            return self._reject_live()
+        size_sol = self.positions.get(symbol)
+        entry = self.entries.get(symbol)
+        if size_sol is None or entry is None or entry <= 0:
+            return {"success": False, "error": "No paper position"}
+        if price <= 0:
+            return {"success": False, "error": "Price must be positive"}
+
+        ret = (price - entry) / entry
+        proceeds = size_sol * (1.0 + ret) * (1.0 - self.slippage)
+        proceeds = max(0.0, proceeds)
+        self.current_balance += proceeds
+        del self.positions[symbol]
+        del self.entries[symbol]
+        trade = self._record(symbol, "sell", size_sol, price, proceeds, "close")
+        trade["return_pct"] = ret
+        logger.info(f"Paper sell {symbol} ret={ret:.2%} balance={self.current_balance:.6f} SOL")
+        return {"success": True, "trade": trade, "balance": self.current_balance, "return_pct": ret}
+
+    def _record(self, symbol: str, side: str, size_sol: float, price: float, value: float, status: str) -> Dict[str, Any]:
         trade = {
             "symbol": symbol,
             "side": side,
-            "quantity": quantity,
+            "quantity": size_sol,
+            "size_sol": size_sol,
             "price": price,
-            "value": trade_value,
-            "timestamp": logger._core.extra_time,
-            "mode": "demo"
+            "value": value,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "mode": "paper",
+            "status": status,
         }
-
         self.trades.append(trade)
-        logger.info(f"Demo trade executed: {side} {quantity} {symbol} @ {price}")
-
-        return {"success": True, "trade": trade, "balance": self.current_balance}
-
-    def _execute_live_trade(
-        self,
-        symbol: str,
-        side: str,
-        quantity: float,
-        price: float
-    ) -> Dict[str, Any]:
-        """Execute real trade in live mode."""
-        try:
-            # Validate trade parameters
-            if not self.validate_live_trade(symbol, quantity, price):
-                return {"success": False, "error": "Trade validation failed"}
-
-            # In production, this would:
-            # 1. Call wallet service to sign transaction
-            # 2. Call exchange manager to execute trade
-            # 3. Record trade in database
-
-            # For now, simulate the trade with validation
-            trade_value = quantity * price
-
-            if side == "buy":
-                self.current_balance -= trade_value
-                self.positions[symbol] = self.positions.get(symbol, 0) + quantity
-            else:  # sell
-                if symbol not in self.positions or self.positions[symbol] < quantity:
-                    return {"success": False, "error": "Insufficient position"}
-
-                self.current_balance += trade_value
-                self.positions[symbol] -= quantity
-
-            trade = {
-                "symbol": symbol,
-                "side": side,
-                "quantity": quantity,
-                "price": price,
-                "value": trade_value,
-                "timestamp": logger._core.extra_time,
-                "mode": "live"
-            }
-
-            self.trades.append(trade)
-            logger.info(f"Live trade executed: {side} {quantity} {symbol} @ {price}")
-
-            return {"success": True, "trade": trade, "balance": self.current_balance}
-
-        except Exception as e:
-            logger.error(f"Error executing live trade: {e}")
-            return {"success": False, "error": str(e)}
+        return trade
 
     def get_positions(self) -> Dict[str, float]:
-        """Get current positions."""
         return self.positions.copy()
 
     def get_trade_history(self) -> list:
-        """Get trade history."""
         return self.trades.copy()
 
     def calculate_pnl(self) -> float:
-        """Calculate current P&L (demo mode only)."""
-        if self.is_demo_mode():
-            return self.current_balance - self.demo_balance
+        if self.paper:
+            open_mark = sum(self.positions.values())
+            return (self.current_balance + open_mark) - self.demo_balance
         return 0.0
 
     def reset_demo_account(self):
-        """Reset demo account to initial state."""
         self.current_balance = self.demo_balance
         self.positions = {}
+        self.entries = {}
         self.trades = []
-        logger.info("Demo account reset")
+        logger.info("Paper account reset")
 
-    def validate_live_trade(
-        self,
-        symbol: str,
-        quantity: float,
-        price: float
-    ) -> bool:
-        """
-        Validate trade parameters for live mode.
-
-        Args:
-            symbol: Trading symbol
-            quantity: Trade quantity
-            price: Trade price
-
-        Returns:
-            True if trade is valid
-        """
-        live_config = self.config.account_mode.live
-
-        # Check position size limit
-        trade_value = quantity * price
-        max_position = live_config.get('max_position_size_usd', 1000)
-
-        if trade_value > max_position:
-            logger.warning(f"Trade exceeds max position size: {trade_value} > {max_position}")
-            return False
-
-        # Check daily loss limit
-        daily_pnl = self.calculate_pnl()
-        daily_loss_limit = live_config.get('daily_loss_limit_usd', 100)
-
-        if daily_pnl < -daily_loss_limit:
-            logger.warning(f"Daily loss limit reached: {daily_pnl} < -{daily_loss_limit}")
-            return False
-
-        return True
+    def validate_live_trade(self, symbol: str, quantity: float, price: float) -> bool:
+        """Live validation never approves an order from this process."""
+        del symbol, quantity, price
+        return False

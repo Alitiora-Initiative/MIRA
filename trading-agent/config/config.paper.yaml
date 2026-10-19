@@ -1,0 +1,69 @@
+# Paper trading defaults. No API keys, no live signing, no mainnet orders.
+# Copy to config.yaml only if you need to override a value.
+
+general:
+  log_level: INFO
+  environment: paper
+  timezone: UTC
+
+solana:
+  rpc_endpoint: ""
+  commitment: confirmed
+  jito_endpoint: ""
+  jito_tip_lamports: 0
+
+trading:
+  max_position_size: 10.0
+  max_daily_loss: 0.05
+  max_open_positions: 5
+  sol:
+    min_trade: 0.001
+    max_trade: 10.0
+    min_deposit: 0.60
+  assets:
+    memecoins: true
+    wrapped_lp_tokens: true
+    tokenized_stocks: true
+
+phi_matrix:
+  minimum_phi_score: 85.0
+
+risk_management:
+  position_sizing_method: kelly_criterion
+  take_profit_floor: 0.10
+  take_profit_cap: 10.0
+  stop_loss_floor: -0.10
+  stop_loss_ceiling: -0.40
+
+account_mode:
+  mode: demo
+  demo:
+    paper_trading: true
+    initial_balance_sol: 25.0
+    simulate_slippage: true
+    simulate_execution: true
+  live:
+    require_biometric: true
+    require_hardware_wallet: true
+
+database:
+  type: sqlite
+  connection_string: sqlite:///mira_paper.db
+
+mev_engine:
+  enabled: false
+  sandwich_detection: true
+  circuit_breaker_enabled: true
+
+wallet_service:
+  grpc_endpoint: 127.0.0.1:50051
+  ws_endpoint: ws://127.0.0.1:8080
+
+external_bridges:
+  webhooks:
+    enabled: false
+    authentication:
+      type: api_key
+      keys:
+        tradingview: ""
+        metatrader: ""

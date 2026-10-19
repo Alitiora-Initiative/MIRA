@@ -1,150 +1,126 @@
 """
-Core Trading Engine - Orchestrates all trading modules for MIRA.
+Core Trading Engine - paper session by default.
+
+This entrypoint does not submit live swaps, Jito bundles, or wallet signatures.
 """
 
 import asyncio
-from typing import Dict, Any
+import os
 from loguru import logger
 
 from core.config import Config
-from exchanges.exchange_manager import SolanaExchangeManager
-from solana.phi_matrix import PhiMatrix
 from risk.risk_manager import RiskManager
-from scaling.recursive_scaling import RecursiveScaling
-from scaling.subagent_genesis import SubagentGenesis
 from database.db_manager import DatabaseManager
 from account.account_manager import AccountManager
+from paper.book import PaperBook
+from paper.limits import bounds
 
 
 class TradingEngine:
-    """Main trading engine that coordinates all modules."""
+    """Main trading engine. Launch path is paper-only unless refused."""
 
     def __init__(self, config: Config):
         self.config = config
         self.running = False
-
-        # Initialize modules
-        self.exchange_manager = SolanaExchangeManager(config)
-        self.phi_matrix = PhiMatrix(config)
         self.risk_manager = RiskManager(config)
-        self.recursive_scaling = RecursiveScaling(config)
-        self.subagent_genesis = SubagentGenesis(config)
         self.db_manager = DatabaseManager(config)
         self.account_manager = AccountManager(config)
-
+        self.book = PaperBook(
+            config.trading.sol,
+            take_profit=abs(config.risk_management.take_profit_floor),
+            stop_loss=abs(config.risk_management.stop_loss_floor),
+        )
         logger.info("MIRA Trading Engine initialized")
 
+    def paper_enabled(self) -> bool:
+        mode = self.config.account_mode
+        demo = mode.demo or {}
+        return mode.mode == "demo" and bool(demo.get("paper_trading", False))
+
     async def start(self):
-        """Start the trading engine."""
-        logger.info("Starting MIRA trading engine...")
+        """Start the paper trading engine."""
+        if not self.paper_enabled():
+            raise RuntimeError(
+                "Refusing to start. Set account_mode.mode=demo and "
+                "account_mode.demo.paper_trading=true. Live signing stays off."
+            )
 
-        # Initialize database
+        minimum, maximum = bounds(self.config.trading.sol)
+        logger.info(f"Paper session SOL clip {minimum} – {maximum}")
+        logger.info("No live RPC, no Jito bundle, no seed phrase.")
+
         await self.db_manager.initialize()
+        self.risk_manager.set_equity_basis(self.account_manager.demo_balance)
 
-        # Initialize exchange connections
-        await self.exchange_manager.initialize()
-
-        # Initialize subagent genesis Docker
-        await self.subagent_genesis.initialize_docker()
-
-        # Start all modules
-        tasks = [
-            self._run_token_evaluation_loop(),
-            self._run_risk_monitoring(),
-            self._run_scaling_loop(),
-        ]
-
+        cycles = int(os.environ.get("MIRA_PAPER_CYCLES", "0") or "0")
+        pause = float(os.environ.get("MIRA_PAPER_SLEEP", "2") or "2")
         self.running = True
-        logger.info("MIRA trading engine started successfully")
+        step = 0
+        try:
+            while self.running:
+                await self._paper_step(step)
+                step += 1
+                if cycles and step >= cycles:
+                    logger.info(f"Paper session finished after {step} cycles")
+                    break
+                await asyncio.sleep(pause)
+        finally:
+            self.running = False
 
-        # Run all tasks concurrently
-        await asyncio.gather(*tasks)
+    async def _paper_step(self, step: int) -> None:
+        action = self.book.decide(
+            step,
+            self.account_manager.current_balance,
+            self.account_manager.positions,
+            self.account_manager.entries,
+        )
+        if not action:
+            if step % 5 == 0:
+                logger.info(
+                    f"PAPER scan {step} bank={self.account_manager.current_balance:.6f} SOL "
+                    f"open={list(self.account_manager.positions) or 'none'}"
+                )
+            return
+
+        result = self.account_manager.execute_trade(
+            action["symbol"],
+            action["side"],
+            float(action["size_sol"]),
+            float(action["price"]),
+        )
+        if not result.get("success"):
+            logger.warning(f"Paper order rejected: {result.get('error')}")
+            return
+
+        trade = result["trade"]
+        if action["side"] == "sell":
+            ret = float(result.get("return_pct") or 0)
+            self.risk_manager.update_pnl(float(action["size_sol"]) * ret)
+
+        await self.db_manager.log_trade(
+            {
+                "token_address": action["symbol"],
+                "input_mint": "SOL",
+                "output_mint": action["symbol"],
+                "amount": trade["size_sol"],
+                "phi_score": action.get("phi"),
+            },
+            result,
+        )
+        logger.info(
+            f"PAPER {action['side'].upper()} {trade['size_sol']} SOL {action['symbol']} "
+            f"@ {action['price']:.6f} ({action['reason']}) "
+            f"bank={result['balance']:.6f} SOL"
+        )
 
     async def stop(self):
         """Stop the trading engine gracefully."""
-        logger.info("Stopping MIRA trading engine...")
+        logger.info("Stopping MIRA paper engine...")
         self.running = False
-
-        # Close exchange connections
-        await self.exchange_manager.shutdown()
-
-        # Close database connection
         await self.db_manager.shutdown()
-
-        logger.info("MIRA trading engine stopped")
-
-    async def _run_token_evaluation_loop(self):
-        """Run token evaluation via Φ Matrix."""
-        logger.info("Starting token evaluation loop")
-
-        while self.running:
-            try:
-                candidate_tokens = []
-
-                for token_address in candidate_tokens:
-                    evaluation = await self.phi_matrix.evaluate_token(token_address)
-
-                    if evaluation['passed']:
-                        logger.info(f"Token passed Φ evaluation: {token_address} (score: {evaluation['phi_score']:.2f}%)")
-
-                await asyncio.sleep(60)
-
-            except Exception as e:
-                logger.error(f"Error in token evaluation loop: {e}")
-                await asyncio.sleep(10)
-
-    async def _run_risk_monitoring(self):
-        """Run continuous risk monitoring."""
-        logger.info("Starting risk monitoring")
-
-        while self.running:
-            try:
-                # Check portfolio risk
-                await self.risk_manager.check_portfolio_risk()
-
-                # Check individual positions
-                await self.risk_manager.check_positions()
-
-                await asyncio.sleep(60)
-
-            except Exception as e:
-                logger.error(f"Error in risk monitoring: {e}")
-                await asyncio.sleep(10)
-
-    async def _run_scaling_loop(self):
-        """Run recursive scaling and sub-agent genesis."""
-        logger.info("Starting scaling loop")
-
-        while self.running:
-            try:
-                # Check for milestone targets
-                current_sol = await self._get_current_sol_balance()
-                await self.recursive_scaling.update_capital(current_sol)
-
-                # Check for perpetual scaling
-                usd_value = await self._get_account_usd_value()
-                if await self.recursive_scaling.check_perpetual_scaling(usd_value):
-                    logger.info("Perpetual scaling threshold reached - enabling derivatives")
-
-                # Check for sub-agent genesis
-                profit_usd = await self._get_accumulated_profit()
-                if await self.subagent_genesis.check_genesis_trigger(profit_usd):
-                    await self.subagent_genesis.trigger_genesis(usd_value)
-
-                await asyncio.sleep(300)
-
-            except Exception as e:
-                logger.error(f"Error in scaling loop: {e}")
-                await asyncio.sleep(30)
-
-    async def _get_current_sol_balance(self) -> float:
-        """Get current SOL balance."""
-        return 0.0
-
-    async def _get_account_usd_value(self) -> float:
-        """Get account valuation in USD."""
-        return 0.0
-
-    async def _get_accumulated_profit(self) -> float:
-        """Get accumulated profit in USD."""
-        return 0.0
+        fills = len(self.account_manager.trades)
+        logger.info(
+            f"MIRA paper engine stopped. fills={fills} "
+            f"bank={self.account_manager.current_balance:.6f} SOL "
+            f"pnl={self.account_manager.calculate_pnl():.6f} SOL"
+        )

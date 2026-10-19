@@ -48,6 +48,9 @@ export class SignerService {
    */
   registerSolanaKeypair(walletAddress: string, secretKey: Uint8Array): void {
     const keypair = Keypair.fromSecretKey(secretKey);
+    if (keypair.publicKey.toBase58() !== walletAddress) {
+      throw new Error('Solana keypair does not match wallet address');
+    }
     this.solanaKeypairs.set(walletAddress, keypair);
   }
 
@@ -56,6 +59,9 @@ export class SignerService {
    */
   registerEvmWallet(walletAddress: string, privateKey: string): void {
     const wallet = new ethers.Wallet(privateKey);
+    if (wallet.address.toLowerCase() !== walletAddress.toLowerCase()) {
+      throw new Error('EVM key does not match wallet address');
+    }
     this.evmWallets.set(walletAddress, wallet);
   }
 

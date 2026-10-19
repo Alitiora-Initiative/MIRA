@@ -63,6 +63,18 @@ type MiraState = {
   step: () => void;
 };
 
+const MIN_TRADE_SOL = 0.001;
+const MAX_TRADE_SOL = 10;
+
+function clipSize(balanceSol: number, phi: number): number | null {
+  if (phi < 85 || balanceSol < MIN_TRADE_SOL) return null;
+  const cap = Math.min(MAX_TRADE_SOL, balanceSol);
+  const conviction = Math.max(0, Math.min(1, (phi - 85) / 13));
+  const size = Math.min(cap, MIN_TRADE_SOL + conviction * (cap - MIN_TRADE_SOL));
+  const rounded = Math.round(size * 1e9) / 1e9;
+  if (rounded < MIN_TRADE_SOL || rounded > MAX_TRADE_SOL) return null;
+  return rounded;
+}
 function stamp() {
   const d = new Date();
   return d.toLocaleTimeString("en-GB", { hour12: false });
@@ -73,11 +85,11 @@ export const useMira = create<MiraState>()(
     (set, get) => ({
       armed: false,
       pubkey: null,
-      balanceSol: 0.010914,
+      balanceSol: 25,
       solUsd: 104,
       targetFloor: 10,
       ticks: [
-        { t: stamp(), msg: "Idle. Connect Phantom — Google session stays inside the wallet.", kind: "halt" },
+        { t: stamp(), msg: "Paper book idle. Clip is 0.001–10 SOL. No seed phrase, no live send.", kind: "halt" },
       ],
       assets: BASE_ASSETS,
       nodes: [],
@@ -91,7 +103,7 @@ export const useMira = create<MiraState>()(
             {
               t: stamp(),
               msg: on
-                ? "Agent loop armed. Orders wait for a Phantom approval — no seed phrase."
+                ? "Paper loop armed. Fills stay inside 0.001–10 SOL. Phantom only approves, it never exports a key."
                 : "Agent halted by operator.",
               kind: (on ? "scan" : "halt") as Tick["kind"],
             },
@@ -151,17 +163,18 @@ export const useMira = create<MiraState>()(
 
         if (!position && outside && n % 4 === 3) {
           const pick = assets.find((a: AssetRow) => a.phi >= 85 && a.action !== "BLACKLIST");
-          if (pick && balanceSol >= 0.0015) {
+          const sizeSol = pick ? clipSize(balanceSol, pick.phi) : null;
+          if (pick && sizeSol) {
             position = {
               ticker: pick.ticker,
               entry: 0.0042,
               now: 0.0042,
-              sizeSol: 0.001,
+              sizeSol,
               tp: 0.15,
               sl: 0.12,
             };
-            balanceSol = Math.max(0, balanceSol - 0.001);
-            push(`EVAL 0.001 SOL staged on $${pick.ticker}. Waiting on Phantom to approve.`, "exec");
+            balanceSol = Math.max(0, balanceSol - sizeSol);
+            push(`PAPER ${sizeSol} SOL staged on $${pick.ticker}. Band 0.001–10. Waiting on Phantom to approve.`, "exec");
           }
         } else if (position) {
           const move = 1 + Math.sin(n / 4) * 0.04 + 0.012;

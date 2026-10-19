@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import time
 
 from core.config import Config
+from paper.limits import size_allowed, bounds
 
 
 @dataclass
@@ -28,9 +29,13 @@ class RiskManager:
     def __init__(self, config: Config):
         self.config = config
         self.daily_pnl = 0.0
+        self.equity_basis = 0.0
         self.current_positions: Dict[str, Position] = {}
         self.risk_config = config.risk_management
         logger.info("Risk Manager initialized")
+
+    def set_equity_basis(self, equity_sol: float) -> None:
+        self.equity_basis = max(0.0, float(equity_sol))
 
     async def evaluate_signals(self, signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Evaluate trading signals against risk criteria."""
@@ -38,11 +43,10 @@ class RiskManager:
 
         for signal in signals:
             try:
-                # Check if signal passes risk criteria
                 if await self._check_signal_risk(signal):
                     approved_signals.append(signal)
                 else:
-                    logger.info(f"Signal rejected by risk manager: {signal}")
+                    logger.info(f"Signal rejected by risk manager: {signal.get('token_address', signal.get('symbol', 'unknown'))}")
 
             except Exception as e:
                 logger.error(f"Error evaluating signal: {e}")
@@ -51,23 +55,30 @@ class RiskManager:
 
     async def _check_signal_risk(self, signal: Dict[str, Any]) -> bool:
         """Check if a signal meets risk criteria."""
-        # Check daily loss limit
-        if self.daily_pnl < -self.config.trading.max_daily_loss:
+        loss_limit = self.config.trading.max_daily_loss
+        if 0 < loss_limit <= 1 and self.equity_basis > 0:
+            if self.daily_pnl < -(loss_limit * self.equity_basis):
+                logger.warning("Daily loss limit reached, rejecting signal")
+                return False
+        elif self.daily_pnl < -abs(loss_limit):
             logger.warning("Daily loss limit reached, rejecting signal")
             return False
 
-        # Check max open positions
         if len(self.current_positions) >= self.config.trading.max_open_positions:
             logger.warning("Max open positions reached, rejecting signal")
             return False
 
-        # Check position size
-        if signal.get('amount', 0) > self.config.trading.max_position_size:
+        amount = float(signal.get("amount") or 0)
+        if not size_allowed(amount, self.config.trading.sol):
+            minimum, maximum = bounds(self.config.trading.sol)
+            logger.warning(f"SOL size {amount} outside {minimum}-{maximum}")
+            return False
+
+        if amount > self.config.trading.max_position_size:
             logger.warning("Position size exceeds limit, rejecting signal")
             return False
 
-        # Check confidence threshold
-        confidence = signal.get('confidence', 0)
+        confidence = signal.get("confidence", 0)
         min_confidence = 0.5
         if confidence < min_confidence:
             logger.warning(f"Signal confidence too low: {confidence}")
@@ -76,95 +87,81 @@ class RiskManager:
         return True
 
     async def evaluate_arbitrage(self, opportunity: Dict[str, Any]) -> bool:
-        """Evaluate arbitrage opportunity against risk criteria."""
-        # Check profit threshold
-        min_profit = self.config.strategies.arbitrage.get('min_profit_percentage', 0.5) / 100
-        if opportunity['profit_percentage'] < min_profit:
+        """Reject arbitrage unless an explicit minimum profit is configured.
+
+        There is no strategies.arbitrage block on Config. Missing config used
+        to raise AttributeError and could fail open in a caller that ignored
+        the exception. This fails closed.
+        """
+        configured = getattr(self.config, "strategies", None)
+        if not configured:
+            logger.warning("Arbitrage disabled: no strategy config")
             return False
+        min_profit = float(configured.get("arbitrage", {}).get("min_profit_percentage", 0)) / 100
+        profit = float(opportunity.get("profit_percentage") or 0)
+        return profit >= min_profit and min_profit > 0
 
-        # Check if we have sufficient balance
-        # (Would check actual balances in production)
-
-        return True
+    def _position_value(self, position: Position) -> float:
+        return float(position.amount) * float(position.current_price)
 
     async def check_portfolio_risk(self):
         """Check overall portfolio risk."""
         try:
-            # Calculate portfolio metrics
-            total_exposure = sum(pos.get('value', 0) for pos in self.current_positions.values())
-
-            # Check diversification
-            max_single_position = max(
-                (pos.get('value', 0) for pos in self.current_positions.values()),
-                default=0
-            )
+            values = [self._position_value(pos) for pos in self.current_positions.values()]
+            total_exposure = sum(values)
+            max_single_position = max(values, default=0)
 
             if total_exposure > 0:
                 concentration = max_single_position / total_exposure
                 if concentration > self.config.risk_management.diversification_threshold:
                     logger.warning(f"Portfolio concentration too high: {concentration:.2%}")
 
-            # Check drawdown
-            # (Would calculate from historical data)
-
         except Exception as e:
             logger.error(f"Error checking portfolio risk: {e}")
 
     async def check_positions(self):
         """Check individual positions for risk using continuous-time calculus."""
-        for position_id, position in self.current_positions.items():
+        for position_id, position in list(self.current_positions.items()):
             try:
-                # Real-Time Price Tracking Matrix (Pt) against Initial Position Entry Cost Basis (P0)
                 pt = position.current_price
                 p0 = position.entry_price
+                if p0 <= 0:
+                    logger.warning(f"Skipping position {position_id}: entry price is not positive")
+                    continue
 
-                # Calculate price change percentage
                 price_change_pct = (pt - p0) / p0
 
-                # Check stop loss floor
-                if price_change_pct <= self.risk_config.stop_loss_floor:
-                    logger.info(f"Stop loss floor triggered for position {position_id}: {price_change_pct:.2%}")
-                    return await self._close_position(position_id, "stop_loss_floor")
-
-                # Check stop loss ceiling guardrail
                 if price_change_pct <= self.risk_config.stop_loss_ceiling:
                     logger.info(f"Stop loss ceiling triggered for position {position_id}: {price_change_pct:.2%}")
-                    return await self._close_position(position_id, "stop_loss_ceiling")
+                    await self._close_position(position_id, "stop_loss_ceiling")
+                    continue
 
-                # Check take profit floor
-                if price_change_pct >= self.risk_config.take_profit_floor:
-                    logger.info(f"Take profit floor triggered for position {position_id}: {price_change_pct:.2%}")
-                    return await self._close_position(position_id, "take_profit_floor")
+                if price_change_pct <= self.risk_config.stop_loss_floor:
+                    logger.info(f"Stop loss floor triggered for position {position_id}: {price_change_pct:.2%}")
+                    await self._close_position(position_id, "stop_loss_floor")
+                    continue
 
-                # Check take profit cap
                 if price_change_pct >= self.risk_config.take_profit_cap:
                     logger.info(f"Take profit cap triggered for position {position_id}: {price_change_pct:.2%}")
-                    return await self._close_position(position_id, "take_profit_cap")
+                    await self._close_position(position_id, "take_profit_cap")
+                    continue
+
+                if price_change_pct >= self.risk_config.take_profit_floor:
+                    logger.info(f"Take profit floor triggered for position {position_id}: {price_change_pct:.2%}")
+                    await self._close_position(position_id, "take_profit_floor")
 
             except Exception as e:
                 logger.error(f"Error checking position {position_id}: {e}")
 
     async def _close_position(self, position_id: str, reason: str) -> bool:
-        """
-        Close position and execute cross-swap back to native SOL.
-
-        Args:
-            position_id: Position identifier
-            reason: Reason for closing position
-
-        Returns:
-            True if successful, False otherwise
-        """
+        """Drop a position from the risk book. Does not broadcast a live swap."""
         try:
             position = self.current_positions.get(position_id)
             if not position:
                 return False
 
-            logger.info(f"Closing position {position_id} via cross-swap to SOL: {reason}")
-
-            # Remove from tracking
+            logger.info(f"Closing paper risk position {position_id}: {reason}")
             self.remove_position(position_id)
-
             return True
 
         except Exception as e:
@@ -176,28 +173,31 @@ class RiskManager:
         signal: Dict[str, Any],
         portfolio_value: float
     ) -> float:
-        """Calculate optimal position size based on risk parameters."""
+        """Calculate optimal position size, then hard-clip to the SOL band."""
         method = self.config.risk_management.position_sizing_method
+        minimum, maximum = bounds(self.config.trading.sol)
 
-        if method == 'fixed':
-            return portfolio_value * self.config.trading.max_position_size
+        if method == "fixed":
+            size = portfolio_value * min(self.config.trading.max_position_size, 1.0)
+        elif method == "kelly_criterion":
+            win_rate = signal.get("win_rate", 0.5)
+            avg_win = signal.get("avg_win", 0.05)
+            avg_loss = signal.get("avg_loss", 0.03)
+            if avg_win <= 0:
+                size = minimum
+            else:
+                kelly_pct = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
+                kelly_pct = max(0, min(kelly_pct, 0.25))
+                size = portfolio_value * kelly_pct
+        elif method == "risk_parity":
+            slots = max(1, self.config.trading.max_open_positions)
+            size = portfolio_value / slots
+        else:
+            size = portfolio_value * 0.02
 
-        elif method == 'kelly_criterion':
-            # Kelly criterion calculation
-            win_rate = signal.get('win_rate', 0.5)
-            avg_win = signal.get('avg_win', 0.05)
-            avg_loss = signal.get('avg_loss', 0.03)
-
-            kelly_pct = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
-            kelly_pct = max(0, min(kelly_pct, 0.25))  # Cap at 25%
-
-            return portfolio_value * kelly_pct
-
-        elif method == 'risk_parity':
-            # Risk parity - equal risk contribution
-            return portfolio_value / self.config.trading.max_open_positions
-
-        return portfolio_value * self.config.trading.max_position_size
+        if size < minimum:
+            return 0.0
+        return min(size, maximum, self.config.trading.max_position_size)
 
     def update_position(self, position_id: str, position_data: Position):
         """Update position data."""
@@ -222,17 +222,11 @@ class RiskManager:
     ) -> Position:
         """
         Create a new position with continuous-time calculus parameters.
-
-        Args:
-            position_id: Position identifier
-            token_address: Token mint address
-            entry_price: Entry price (P0)
-            amount: Position amount
-            side: 'buy' or 'sell'
-
-        Returns:
-            Position object
         """
+        if not size_allowed(amount, self.config.trading.sol):
+            minimum, maximum = bounds(self.config.trading.sol)
+            raise ValueError(f"SOL size {amount} outside {minimum}-{maximum}")
+
         position = Position(
             position_id=position_id,
             token_address=token_address,

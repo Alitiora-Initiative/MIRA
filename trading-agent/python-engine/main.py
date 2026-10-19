@@ -1,51 +1,70 @@
 #!/usr/bin/env python3
 """
-AI Trading Agent - Main Entry Point
+MIRA paper trading entrypoint.
+
+Loads config.paper.yaml when config.yaml is absent. Never reads a seed phrase.
 """
 
 import asyncio
-import yaml
+import os
+import sys
 from pathlib import Path
-from loguru import logger
+
+import yaml
 from dotenv import load_dotenv
+from loguru import logger
 
-from core.engine import TradingEngine
 from core.config import Config
+from core.engine import TradingEngine
 
 
-def load_config(config_path: str = "config/config.yaml") -> Config:
-    """Load configuration from YAML file."""
+def resolve_config_path() -> Path:
+    override = os.environ.get("MIRA_CONFIG")
+    if override:
+        return Path(override)
+    root = Path(__file__).resolve().parent.parent / "config"
+    local = root / "config.yaml"
+    if local.exists():
+        return local
+    return root / "config.paper.yaml"
+
+
+def load_config(config_path: Path) -> Config:
     load_dotenv()
-    with open(config_path, 'r') as f:
-        config_data = yaml.safe_load(f)
-    return Config(**config_data)
+    with config_path.open("r", encoding="utf-8") as handle:
+        config_data = yaml.safe_load(handle) or {}
+    return Config.from_dict(config_data)
 
 
-async def main():
-    """Main entry point for the trading agent."""
-    logger.info("Starting AI Trading Agent...")
+async def main() -> None:
+    logger.info("Starting MIRA paper trading...")
+    config_path = resolve_config_path()
+    if not config_path.exists():
+        logger.error(f"Config not found: {config_path}")
+        raise SystemExit(1)
 
-    # Load configuration
-    config_path = Path(__file__).parent.parent / "config" / "config.yaml"
-    config = load_config(str(config_path))
-
+    config = load_config(config_path)
+    minimum = config.trading.sol.get("min_trade")
+    maximum = config.trading.sol.get("max_trade")
+    logger.info(f"Config: {config_path.name}")
     logger.info(f"Environment: {config.general.environment}")
-    logger.info(f"Trading mode: {config.general.environment}")
+    logger.info(f"Account mode: {config.account_mode.mode}")
+    logger.info(f"SOL clip: {minimum} – {maximum}")
 
-    # Initialize trading engine
     engine = TradingEngine(config)
-
     try:
-        # Start the engine
         await engine.start()
     except KeyboardInterrupt:
         logger.info("Shutting down gracefully...")
-    except Exception as e:
-        logger.error(f"Fatal error: {e}")
+    except Exception as exc:
+        logger.error(f"Fatal error: {exc}")
         raise
     finally:
         await engine.stop()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        sys.exit(0)
