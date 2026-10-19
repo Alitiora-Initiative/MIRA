@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Shell } from "@/components/mira/shell";
 import { KNOWN_VAULT, shortKey } from "@/lib/mira/phantom";
 import { useMira } from "@/lib/mira/store";
-import { Activity, Cpu, BarChart3 } from "lucide-react";
+import { Activity, Cpu, BarChart3, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
@@ -26,9 +26,9 @@ function Dashboard() {
 
   return (
     <Shell>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between fade-in">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal-dim/20 px-3 py-1 mb-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal-dim/20 px-3 py-1 mb-3 shimmer-effect">
             <BarChart3 size={14} className="text-teal" />
             <span className="font-mono text-xs text-teal">ANALYTICS</span>
           </div>
@@ -41,7 +41,7 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass hover:shadow-glow transition-all duration-300">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass hover:shadow-glow transition-all duration-300 cinematic-border">
           <div className="flex items-center gap-2 mb-3">
             <Activity className="text-teal" size={18} />
             <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Initial floor</p>
@@ -53,7 +53,7 @@ function Dashboard() {
           </p>
           <p className="mt-1 text-xs text-muted">MPC split stays inside Phantom. This page never stores a key.</p>
         </article>
-        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass hover:shadow-glow transition-all duration-300">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass hover:shadow-glow transition-all duration-300 cinematic-border">
           <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted mb-3">
             <span>Progress · step {prev} → {next} SOL</span>
             <span className="text-amber">{pct.toFixed(1)}%</span>
@@ -68,7 +68,7 @@ function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass cinematic-border">
           <div className="grid grid-cols-2 border-b border-line/50 px-4 py-3 font-mono text-[11px] uppercase text-muted bg-surface-2/30">
             <span>Parameter</span>
             <span>Value</span>
@@ -88,7 +88,7 @@ function Dashboard() {
             </div>
           ))}
         </article>
-        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass">
+        <article className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass cinematic-border">
           <div className="flex items-center gap-2 mb-3">
             <Zap className="text-teal" size={18} />
             <p className="font-mono text-[11px] uppercase tracking-wider text-muted">Execution telemetry</p>
@@ -103,7 +103,7 @@ function Dashboard() {
         </article>
       </div>
 
-      <article className="mt-6 overflow-hidden rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass">
+      <article className="mt-6 overflow-hidden rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass cinematic-border">
         <div className="flex items-center gap-2 bg-surface-2/30 px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-muted border-b border-line/50">
           <Cpu className="text-teal" size={16} />
           <span>Sub-agent nodes · spawn after +$20 net</span>

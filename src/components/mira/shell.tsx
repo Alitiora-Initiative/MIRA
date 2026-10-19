@@ -29,14 +29,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#07090f] to-[#05070a] text-fg">
-      <header className="sticky top-0 z-20 border-b border-line/50 glass">
+    <div className="min-h-screen bg-gradient-to-br from-bg-alt via-bg to-[#020304] text-fg relative overflow-hidden">
+      {/* Cinematic ambient lighting */}
+      <div className="fixed inset-0 bg-cinematic pointer-events-none opacity-50" />
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-gradient-to-b from-teal/5 to-transparent pointer-events-none" />
+
+      <header className="sticky top-0 z-20 border-b border-line/50 glass backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3">
           <Link to="/" className="flex items-center gap-2 font-semibold tracking-wide group">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-teal-dim to-teal text-teal-light shadow-glow group-hover:shadow-glow-strong transition-all duration-300">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-teal-dim to-teal-dark text-teal-light shadow-glow group-hover:shadow-glow-strong transition-all duration-300 cinematic-border">
               <Activity size={18} />
             </span>
-            <span className="text-xl font-bold bg-gradient-to-r from-teal to-teal-light bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-teal via-teal-light to-teal bg-clip-text text-transparent">
               MIRA
             </span>
           </Link>
@@ -52,7 +56,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {pubkey ? (
               <button
                 type="button"
-                className="h-11 rounded-full border border-line/50 bg-surface/80 backdrop-blur-sm px-4 text-sm hover:border-teal/50 hover:bg-surface-2/80 transition-all duration-300"
+                className="h-11 rounded-full border border-line/50 bg-surface/80 backdrop-blur-sm px-4 text-sm hover:border-teal/50 hover:bg-surface-2/80 transition-all duration-300 cinematic-border"
                 onClick={() => {
                   void disconnectPhantom();
                   setWallet(null, null);
@@ -63,7 +67,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             ) : (
               <button
                 type="button"
-                className="h-11 rounded-full bg-gradient-to-r from-teal to-teal-light px-4 text-sm font-semibold text-ink shadow-glow hover:shadow-glow-strong transition-all duration-300"
+                className="h-11 rounded-full bg-gradient-to-r from-teal to-teal-light px-4 text-sm font-semibold text-ink shadow-glow hover:shadow-glow-strong transition-all duration-300 cinematic-border"
                 onClick={() => void onConnect()}
               >
                 {phantomInstalled() ? "Connect Phantom" : "Connect Phantom"}
@@ -79,7 +83,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 relative z-10">{children}</main>
     </div>
   );
 }
@@ -88,7 +92,7 @@ function Tab({ href, label, active }: { href: "/" | "/dashboard"; label: string;
   return (
     <Link
       to={href}
-      className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${active ? "bg-gradient-to-r from-teal-dim/50 to-teal-dim/30 text-teal border border-teal/30 shadow-glow" : "text-muted hover:text-fg hover:bg-surface-2/30"}`}
+      className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-300 ${active ? "bg-gradient-to-r from-teal-dim/50 to-teal-dim/30 text-teal border border-teal/30 shadow-glow cinematic-border" : "text-muted hover:text-fg hover:bg-surface-2/30"}`}
     >
       {label}
     </Link>

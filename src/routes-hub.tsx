@@ -38,9 +38,9 @@ function Home() {
 
   return (
     <Shell>
-      <section className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <section className="mb-8 flex flex-wrap items-end justify-between gap-4 fade-in">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal-dim/20 px-3 py-1 mb-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal-dim/20 px-3 py-1 mb-4 shimmer-effect">
             <Zap size={14} className="text-teal" />
             <span className="font-mono text-xs text-teal">AI-POWERED TRADING</span>
           </div>
@@ -51,7 +51,7 @@ function Home() {
             Paper book only. Phantom keeps the key. Each fill is clipped to 0.001–10 SOL and still needs your approval.
           </p>
         </div>
-        <div className="flex items-center gap-3 rounded-2xl border border-teal/30 bg-teal-dim/20 backdrop-blur-sm px-6 py-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-teal/30 bg-teal-dim/20 backdrop-blur-sm px-6 py-4 cinematic-border">
           <TrendingUp className="text-teal" size={24} />
           <div>
             <p className="font-mono text-xs text-muted">Active contracts</p>
@@ -61,14 +61,14 @@ function Home() {
       </section>
 
       {!hasPhantom && (
-        <div className="mb-6 rounded-2xl border border-amber/40 bg-amber/10 backdrop-blur-sm px-4 py-3 text-sm text-amber">
+        <div className="mb-6 rounded-2xl border border-amber/40 bg-amber/10 backdrop-blur-sm px-4 py-3 text-sm text-amber fade-in">
           Phantom is not in this browser yet. Open this page inside the Phantom app browser (the same Google
           account you used to create the wallet). Connect, then tap Approve.
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-4 shadow-glass">
+        <aside className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-4 shadow-glass cinematic-border">
           <p className="px-2 pb-3 font-mono text-[11px] uppercase tracking-wider text-muted">Tickers</p>
           <ul className="space-y-2">
             {PAIRS.map((p, i) => (
@@ -83,7 +83,7 @@ function Home() {
           </ul>
           <p className="mt-4 px-2 text-xs text-muted">Filter · rating above 85%</p>
         </aside>
-        <div className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass">
+        <div className="rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass cinematic-border">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-mono text-xs uppercase tracking-wider text-muted">SOL path · calculus domain</p>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-dim/30 px-2.5 py-1 font-mono text-xs text-teal">
@@ -95,7 +95,7 @@ function Home() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm shadow-glass cinematic-border">
         <div className="grid grid-cols-[1fr_1.4fr_0.8fr_0.9fr] gap-2 bg-surface-2/50 px-4 py-3 font-mono text-[11px] uppercase tracking-wider text-muted border-b border-line/50">
           <span>Asset</span>
           <span className="hidden sm:block">Contract</span>
@@ -117,7 +117,7 @@ function Home() {
         ))}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line/50 bg-surface/80 backdrop-blur-sm p-5 shadow-glass cinematic-border">
         <div className="flex items-start gap-4">
           <div className="rounded-xl bg-teal-dim/30 p-3">
             <ShieldCheck className="text-teal" size={20} />
@@ -134,7 +134,7 @@ function Home() {
         <button
           type="button"
           onClick={() => void approve()}
-          className="h-12 rounded-full bg-gradient-to-r from-teal to-teal-light px-6 text-sm font-semibold text-ink shadow-glow hover:shadow-glow-strong transition-all duration-300"
+          className="h-12 rounded-full bg-gradient-to-r from-teal to-teal-light px-6 text-sm font-semibold text-ink shadow-glow hover:shadow-glow-strong transition-all duration-300 cinematic-border"
         >
           Approve in Phantom
         </button>

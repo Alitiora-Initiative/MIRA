@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
-import './styles.css';
 import './routes-hub';
 import './routes-dashboard';
 

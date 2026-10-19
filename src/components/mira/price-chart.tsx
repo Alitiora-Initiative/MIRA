@@ -18,29 +18,37 @@ export function PriceChart({ seed }: { seed: number }) {
         <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="miraFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2ee6a6" stopOpacity={0.4} />
-              <stop offset="50%" stopColor="#2ee6a6" stopOpacity={0.2} />
+              <stop offset="0%" stopColor="#2ee6a6" stopOpacity={0.5} />
+              <stop offset="40%" stopColor="#2ee6a6" stopOpacity={0.25} />
               <stop offset="100%" stopColor="#2ee6a6" stopOpacity={0} />
             </linearGradient>
             <linearGradient id="miraStroke" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#2ee6a6" />
-              <stop offset="100%" stopColor="#4fffd4" />
+              <stop offset="50%" stopColor="#4fffd4" />
+              <stop offset="100%" stopColor="#2ee6a6" />
             </linearGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#24302a" opacity={0.3} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1a1f26" opacity={0.4} />
           <XAxis dataKey="h" hide />
           <YAxis domain={["auto", "auto"]} hide />
           <Tooltip
             contentStyle={{
-              background: "rgba(16, 21, 28, 0.95)",
-              border: "1px solid rgba(46, 230, 166, 0.3)",
+              background: "rgba(12, 16, 22, 0.95)",
+              border: "1px solid rgba(46, 230, 166, 0.4)",
               borderRadius: 12,
               fontSize: 12,
-              backdropFilter: "blur(8px)",
-              boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
             }}
-            itemStyle={{ color: "#e7efe8" }}
-            labelStyle={{ color: "#8b978f" }}
+            itemStyle={{ color: "#e8eef5" }}
+            labelStyle={{ color: "#7d8794" }}
           />
           <Area
             type="monotone"
@@ -49,7 +57,8 @@ export function PriceChart({ seed }: { seed: number }) {
             fill="url(#miraFill)"
             strokeWidth={2.5}
             dot={false}
-            activeDot={{ r: 4, fill: "#2ee6a6", stroke: "#4fffd4", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "#2ee6a6", stroke: "#4fffd4", strokeWidth: 2, filter: "url(#glow)" }}
+            style={{ filter: "url(#glow)" }}
           />
         </AreaChart>
       </ResponsiveContainer>

@@ -6,8 +6,8 @@
 @layer base {
   html,
   body {
-    background: radial-gradient(ellipse at top, #0d1117 0%, #07090f 50%, #05070a 100%);
-    color: #e7efe8;
+    background: radial-gradient(ellipse at top, #0a0e14 0%, #05070a 40%, #020304 100%);
+    color: #e8eef5;
     font-family: "Outfit", system-ui, sans-serif;
     min-height: 100%;
     -webkit-font-smoothing: antialiased;
@@ -18,7 +18,7 @@
     cursor: pointer;
   }
   * {
-    border-color: #24302a;
+    border-color: #1a1f26;
   }
 }
 
@@ -59,10 +59,30 @@
 @keyframes glow {
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(46, 230, 166, 0.3);
+    box-shadow: 0 0 20px rgba(46, 230, 166, 0.2), 0 0 40px rgba(46, 230, 166, 0.1);
   }
   50% {
-    box-shadow: 0 0 40px rgba(46, 230, 166, 0.6);
+    box-shadow: 0 0 30px rgba(46, 230, 166, 0.4), 0 0 60px rgba(46, 230, 166, 0.2);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -80,10 +100,22 @@
   animation: gradient-shift 3s ease infinite;
 }
 
+.shimmer-effect {
+  background: linear-gradient(90deg, transparent, rgba(46, 230, 166, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .live-dot,
   .glow-effect,
-  .gradient-bg {
+  .gradient-bg,
+  .shimmer-effect,
+  .fade-in {
     animation: none;
   }
 }
@@ -95,11 +127,11 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #10151c;
+  background: #0a0e14;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #24302a;
+  background: #1a1f26;
   border-radius: 4px;
 }
 
@@ -109,8 +141,29 @@
 
 /* Glass morphism effect */
 .glass {
-  background: rgba(16, 21, 28, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(36, 48, 42, 0.5);
+  background: rgba(12, 16, 22, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(46, 230, 166, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Cinematic lighting effect */
+.cinematic-border {
+  position: relative;
+}
+
+.cinematic-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, rgba(46, 230, 166, 0.3), transparent, rgba(46, 230, 166, 0.1));
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cinematic-border:hover::before {
+  opacity: 1;
 }
